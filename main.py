@@ -1,17 +1,17 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sklearn.linear_model import LinearRegression
+import plotly.graph_objects as go
 
 # ============================================================
 # CONFIGURACIÓN
 # ============================================================
 
 st.set_page_config(
-    page_title="CCU | Cadena de Suministro Predictiva",
+    page_title="CCU | Predictive Supply Chain",
     page_icon="🍺",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # ============================================================
@@ -20,673 +20,633 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-    .main {
-        background-color: #f7f9fc;
-    }
 
-    .header {
-        background: linear-gradient(90deg, #123b5d, #176b9c);
-        padding: 25px;
-        border-radius: 14px;
-        color: white;
-        margin-bottom: 25px;
-    }
+html, body, [class*="css"] {
+    font-family: Arial, sans-serif;
+}
 
-    .header h1 {
-        margin: 0;
-        font-size: 32px;
-    }
+.stApp {
+    background:
+        radial-gradient(circle at 50% 20%, #123b5d 0%, #071522 42%, #02070c 100%);
+    color: white;
+}
 
-    .header p {
-        margin: 5px 0 0 0;
-        font-size: 16px;
-        color: #dbeafe;
-    }
+.block-container {
+    padding-top: 1rem;
+    padding-bottom: 0rem;
+    max-width: 1500px;
+}
 
-    .kpi {
-        background: white;
-        padding: 18px;
-        border-radius: 12px;
-        border: 1px solid #e5e7eb;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        text-align: center;
-    }
+.hero {
+    text-align:center;
+    padding: 10px 0 5px 0;
+}
 
-    .kpi-title {
-        color: #64748b;
-        font-size: 14px;
-        font-weight: 600;
-    }
+.hero h1 {
+    font-size: 42px;
+    letter-spacing: 5px;
+    margin-bottom: 0;
+    color: #ffffff;
+}
 
-    .kpi-value {
-        color: #123b5d;
-        font-size: 27px;
-        font-weight: 800;
-        margin-top: 5px;
-    }
+.hero p {
+    color: #70c9ff;
+    font-size: 14px;
+    letter-spacing: 3px;
+}
 
-    .section {
-        color: #123b5d;
-        font-size: 22px;
-        font-weight: 700;
-        margin-top: 25px;
-        margin-bottom: 12px;
-    }
+.metric {
+    background: rgba(7, 22, 35, .72);
+    border: 1px solid rgba(80,190,255,.25);
+    border-radius: 12px;
+    padding: 12px;
+    text-align: center;
+    backdrop-filter: blur(8px);
+}
 
-    .executive {
-        background: #eff6ff;
-        border-left: 5px solid #2563eb;
-        padding: 16px;
-        border-radius: 8px;
-        margin-bottom: 15px;
-    }
+.metric-label {
+    color: #7fa5bd;
+    font-size: 11px;
+    letter-spacing: 1px;
+}
 
-    .success {
-        background: #f0fdf4;
-        border-left: 5px solid #22c55e;
-        padding: 16px;
-        border-radius: 8px;
-    }
+.metric-value {
+    font-size: 25px;
+    font-weight: bold;
+    color: white;
+}
 
-    .warning {
-        background: #fff7ed;
-        border-left: 5px solid #f97316;
-        padding: 16px;
-        border-radius: 8px;
-    }
+.status {
+    text-align:center;
+    padding: 10px;
+    border-radius: 10px;
+    margin: 5px 0 12px 0;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
 
-    .danger {
-        background: #fef2f2;
-        border-left: 5px solid #ef4444;
-        padding: 16px;
-        border-radius: 8px;
-    }
+.normal {
+    background: rgba(0,190,130,.15);
+    border: 1px solid #00c98b;
+    color: #42f5b5;
+}
+
+.warning {
+    background: rgba(255,170,0,.15);
+    border: 1px solid #ffaa00;
+    color: #ffc44d;
+}
+
+.danger {
+    background: rgba(255,60,60,.15);
+    border: 1px solid #ff4040;
+    color: #ff7373;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
-
 # ============================================================
-# DATOS SIMULADOS CCU
-# ============================================================
-
-@st.cache_data
-def generar_datos(dias=180):
-
-    np.random.seed(42)
-
-    fechas = pd.date_range(
-        start="2026-03-01",
-        periods=dias,
-        freq="D"
-    )
-
-    categorias = [
-        "Cervezas",
-        "Bebidas gaseosas",
-        "Aguas",
-        "Bebidas energéticas",
-        "Néctares"
-    ]
-
-    categoria = np.random.choice(
-        categorias,
-        size=dias,
-        p=[0.30, 0.30, 0.18, 0.12, 0.10]
-    )
-
-    tendencia = np.linspace(0, 18, dias)
-
-    estacionalidad = (
-        15 * np.sin(np.arange(dias) * 2 * np.pi / 30)
-    )
-
-    demanda = (
-        520
-        + tendencia
-        + estacionalidad
-        + np.random.normal(0, 35, dias)
-    )
-
-    demanda = np.maximum(demanda, 250).round().astype(int)
-
-    ventas = demanda - np.random.normal(
-        15, 12, dias
-    )
-
-    ventas = np.maximum(
-        ventas,
-        demanda * 0.82
-    ).round().astype(int)
-
-    inventario = (
-        1700
-        + np.random.normal(0, 180, dias)
-        - np.arange(dias) * 1.5
-    )
-
-    inventario = np.maximum(
-        inventario,
-        500
-    ).round().astype(int)
-
-    costo_unitario = np.random.uniform(
-        450,
-        1200,
-        dias
-    )
-
-    lead_time = np.random.randint(
-        2,
-        7,
-        dias
-    )
-
-    df = pd.DataFrame({
-        "fecha": fechas,
-        "categoria": categoria,
-        "demanda": demanda,
-        "ventas": ventas,
-        "inventario": inventario,
-        "costo_unitario": costo_unitario,
-        "lead_time": lead_time
-    })
-
-    df["fill_rate"] = (
-        df["ventas"] / df["demanda"]
-    ).clip(0, 1)
-
-    return df
-
-
-# ============================================================
-# FORECAST
-# ============================================================
-
-def calcular_forecast(df):
-
-    data = df.copy()
-
-    data["t"] = np.arange(len(data))
-
-    modelo = LinearRegression()
-
-    modelo.fit(
-        data[["t"]],
-        data["demanda"]
-    )
-
-    data["forecast"] = modelo.predict(
-        data[["t"]]
-    )
-
-    data["forecast"] = data["forecast"].clip(
-        lower=data["demanda"].min() * 0.7
-    )
-
-    return data
-
-
-# ============================================================
-# DATOS
-# ============================================================
-
-df = generar_datos(180)
-
-forecast_df = calcular_forecast(df)
-
-
-# ============================================================
-# KPIs
-# ============================================================
-
-fill_rate = df["fill_rate"].mean()
-
-error_forecast = np.mean(
-    np.abs(
-        df["demanda"] -
-        forecast_df["forecast"]
-    )
-)
-
-inventario_promedio = df["inventario"].mean()
-
-demanda_promedio = df["demanda"].mean()
-
-inventario_valorizado = (
-    df["inventario"] *
-    df["costo_unitario"]
-).mean()
-
-
-# ============================================================
-# MODELO DE INVENTARIO
-# ============================================================
-
-demanda_diaria = demanda_promedio
-
-lead_time_promedio = df["lead_time"].mean()
-
-desviacion_demanda = df["demanda"].std()
-
-stock_seguridad = (
-    1.65 *
-    desviacion_demanda *
-    np.sqrt(lead_time_promedio)
-)
-
-punto_reorden = (
-    demanda_diaria *
-    lead_time_promedio
-    + stock_seguridad
-)
-
-inventario_actual = df["inventario"].iloc[-1]
-
-pedido_sugerido = max(
-    0,
-    punto_reorden - inventario_actual
-)
-
-
-# ============================================================
-# NIVEL DE RIESGO
-# ============================================================
-
-cobertura_dias = (
-    inventario_actual /
-    demanda_diaria
-)
-
-if cobertura_dias < lead_time_promedio:
-    riesgo = "ALTO"
-    color_riesgo = "danger"
-elif cobertura_dias < lead_time_promedio + 3:
-    riesgo = "MEDIO"
-    color_riesgo = "warning"
-else:
-    riesgo = "BAJO"
-    color_riesgo = "success"
-
-
-# ============================================================
-# SIDEBAR
-# ============================================================
-
-st.sidebar.title("🍺 CCU")
-
-st.sidebar.markdown(
-    "**Cadena de Suministro Predictiva**"
-)
-
-st.sidebar.markdown("---")
-
-st.sidebar.subheader(
-    "Parámetros de análisis"
-)
-
-horizonte = st.sidebar.slider(
-    "Horizonte de análisis",
-    30,
-    180,
-    180
-)
-
-categoria_filtro = st.sidebar.multiselect(
-    "Categorías",
-    sorted(df["categoria"].unique()),
-    default=sorted(df["categoria"].unique())
-)
-
-st.sidebar.markdown("---")
-
-st.sidebar.info(
-    "Modelo demostrativo con datos simulados. "
-    "La plataforma representa una propuesta de "
-    "analítica para soporte a decisiones logísticas."
-)
-
-
-# ============================================================
-# FILTRO
-# ============================================================
-
-df_view = df[
-    df["categoria"].isin(categoria_filtro)
-].tail(horizonte)
-
-forecast_view = forecast_df[
-    forecast_df["categoria"].isin(categoria_filtro)
-].tail(horizonte)
-
-
-# ============================================================
-# HEADER
+# TÍTULO
 # ============================================================
 
 st.markdown("""
-<div class="header">
-
-<h1>🍺 CCU — Cadena de Suministro Predictiva</h1>
-
-<p>
-Centro ejecutivo de planificación, pronóstico de demanda,
-gestión de inventario y soporte a decisiones logísticas.
-</p>
-
+<div class="hero">
+    <h1>CCU</h1>
+    <p>PREDICTIVE SUPPLY CHAIN · DIGITAL CONTROL TOWER</p>
 </div>
 """, unsafe_allow_html=True)
 
-
 # ============================================================
-# TABS
-# ============================================================
-
-tab1, tab2, tab3, tab4 = st.tabs([
-    "📊 Dashboard Ejecutivo",
-    "📈 Demanda Predictiva",
-    "📦 Inventario",
-    "🎯 Decisión Logística"
-])
-
-
-# ============================================================
-# DASHBOARD
+# CONTROLES
 # ============================================================
 
-with tab1:
+with st.sidebar:
 
-    st.markdown(
-        '<div class="section">Indicadores Ejecutivos</div>',
-        unsafe_allow_html=True
+    st.markdown("## SIMULATION CONTROL")
+
+    demanda = st.slider(
+        "Demanda diaria",
+        min_value=80,
+        max_value=300,
+        value=150,
+        step=5
     )
 
-    c1, c2, c3, c4 = st.columns(4)
-
-    c1.markdown(f"""
-    <div class="kpi">
-        <div class="kpi-title">Nivel de Servicio</div>
-        <div class="kpi-value">{fill_rate:.1%}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    c2.markdown(f"""
-    <div class="kpi">
-        <div class="kpi-title">Error Forecast</div>
-        <div class="kpi-value">{error_forecast:.0f}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    c3.markdown(f"""
-    <div class="kpi">
-        <div class="kpi-title">Inventario Promedio</div>
-        <div class="kpi-value">{inventario_promedio:,.0f}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    c4.markdown(f"""
-    <div class="kpi">
-        <div class="kpi-title">Riesgo Logístico</div>
-        <div class="kpi-value">{riesgo}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown(
-        '<div class="section">Evolución de la Cadena</div>',
-        unsafe_allow_html=True
+    lead_time = st.slider(
+        "Lead Time",
+        min_value=1,
+        max_value=15,
+        value=5,
+        step=1
     )
 
-    grafico = forecast_view.set_index(
-        "fecha"
-    )[[
-        "demanda",
-        "forecast"
-    ]]
-
-    st.line_chart(grafico)
-
-    st.markdown(
-        '<div class="executive">'
-        '<b>Lectura ejecutiva:</b> '
-        'La plataforma utiliza el comportamiento histórico de la demanda '
-        'para generar una referencia predictiva que permite anticipar '
-        'necesidades de inventario y apoyar la planificación logística.'
-        '</div>',
-        unsafe_allow_html=True
+    capacidad = st.slider(
+        "Capacidad logística",
+        min_value=50,
+        max_value=120,
+        value=100,
+        step=5
     )
 
+    service_level = st.slider(
+        "Nivel de servicio objetivo",
+        min_value=85,
+        max_value=99,
+        value=95,
+        step=1
+    )
+
+    st.markdown("---")
+
+    escenario = st.selectbox(
+        "Escenario",
+        [
+            "Operación normal",
+            "Alta demanda",
+            "Restricción logística"
+        ]
+    )
 
 # ============================================================
-# FORECAST
+# ESCENARIOS
 # ============================================================
 
-with tab2:
+demanda_real = demanda
+lead_real = lead_time
+capacidad_real = capacidad
 
-    st.markdown(
-        '<div class="section">Pronóstico de Demanda</div>',
-        unsafe_allow_html=True
-    )
+if escenario == "Alta demanda":
+    demanda_real = int(demanda * 1.25)
 
-    st.markdown(
-        """
-        El modelo utiliza una regresión de tendencia sobre la demanda
-        histórica para generar una referencia predictiva.
-        """,
-    )
+elif escenario == "Restricción logística":
+    capacidad_real = max(40, int(capacidad * 0.65))
+    lead_real = lead_time + 3
 
-    st.line_chart(
-        forecast_view.set_index("fecha")[[
-            "demanda",
-            "forecast"
-        ]]
-    )
+# ============================================================
+# MOTOR PREDICTIVO
+# ============================================================
 
-    col1, col2, col3 = st.columns(3)
+np.random.seed(42)
 
-    with col1:
-        st.metric(
-            "Demanda promedio",
-            f"{df_view['demanda'].mean():,.0f}"
-        )
+dias = np.arange(30)
 
-    with col2:
-        st.metric(
-            "Forecast actual",
-            f"{forecast_df['forecast'].iloc[-1]:,.0f}"
-        )
+historico = (
+    demanda_real
+    + np.sin(dias / 3) * demanda_real * 0.08
+    + np.random.normal(0, demanda_real * 0.04, len(dias))
+)
 
-    with col3:
-        variacion = (
-            forecast_df["forecast"].iloc[-1]
-            /
-            forecast_df["forecast"].iloc[0]
-            - 1
-        )
+forecast = (
+    demanda_real
+    + np.sin(np.arange(30, 60) / 3) * demanda_real * 0.08
+)
 
-        st.metric(
-            "Tendencia",
-            f"{variacion:+.1%}"
-        )
-
+forecast_prom = float(np.mean(forecast))
 
 # ============================================================
 # INVENTARIO
 # ============================================================
 
-with tab3:
+stock_seguridad = (
+    demanda_real
+    * (lead_real ** 0.5)
+    * ((100 - service_level) / 20 + 0.8)
+)
 
-    st.markdown(
-        '<div class="section">Gestión Predictiva de Inventario</div>',
+rop = (
+    demanda_real * lead_real
+    + stock_seguridad
+)
+
+inventario_inicial = demanda_real * 9
+
+consumo_proyectado = demanda_real * 7
+
+inventario_final = (
+    inventario_inicial
+    - consumo_proyectado
+)
+
+# ============================================================
+# REPOSICIÓN
+# ============================================================
+
+necesidad_reposicion = max(
+    0,
+    rop - inventario_final
+)
+
+eoq = np.sqrt(
+    (2 * demanda_real * 300 * 45000)
+    / 3300
+)
+
+pedido_sugerido = max(
+    necesidad_reposicion,
+    eoq * 0.15
+)
+
+# Capacidad logística afecta el pedido efectivo
+flujo_logistico = pedido_sugerido * (capacidad_real / 100)
+
+# ============================================================
+# RIESGO
+# ============================================================
+
+ratio_inventario = inventario_final / max(rop, 1)
+
+if ratio_inventario < 0.65 or capacidad_real < 60:
+    riesgo = "CRÍTICO"
+    color = "danger"
+
+elif ratio_inventario < 1:
+    riesgo = "MONITOREAR"
+    color = "warning"
+
+else:
+    riesgo = "ESTABLE"
+    color = "normal"
+
+# ============================================================
+# KPIs
+# ============================================================
+
+c1, c2, c3, c4, c5 = st.columns(5)
+
+def metric(col, label, value):
+    col.markdown(
+        f"""
+        <div class="metric">
+            <div class="metric-label">{label}</div>
+            <div class="metric-value">{value}</div>
+        </div>
+        """,
         unsafe_allow_html=True
     )
 
-    c1, c2, c3 = st.columns(3)
+metric(c1, "DEMANDA", f"{demanda_real:,.0f}/día")
+metric(c2, "FORECAST", f"{forecast_prom:,.0f}")
+metric(c3, "INVENTARIO", f"{inventario_final:,.0f}")
+metric(c4, "ROP", f"{rop:,.0f}")
+metric(c5, "REPOSICIÓN", f"{pedido_sugerido:,.0f}")
 
-    c1.metric(
-        "Inventario actual",
-        f"{inventario_actual:,.0f}"
-    )
-
-    c2.metric(
-        "Punto de reorden",
-        f"{punto_reorden:,.0f}"
-    )
-
-    c3.metric(
-        "Stock de seguridad",
-        f"{stock_seguridad:,.0f}"
-    )
-
-    st.markdown("### Inventario vs. Demanda")
-
-    inventario_chart = df_view.set_index(
-        "fecha"
-    )[[
-        "inventario",
-        "demanda"
-    ]]
-
-    st.line_chart(inventario_chart)
-
-    st.markdown("### Distribución por categoría")
-
-    resumen = (
-        df_view
-        .groupby("categoria")
-        .agg(
-            Demanda=("demanda", "sum"),
-            Inventario=("inventario", "mean"),
-            Nivel_Servicio=("fill_rate", "mean")
-        )
-        .reset_index()
-    )
-
-    resumen["Nivel_Servicio"] = (
-        resumen["Nivel_Servicio"] * 100
-    ).round(1)
-
-    st.dataframe(
-        resumen,
-        use_container_width=True,
-        hide_index=True
-    )
-
+st.markdown(
+    f"""
+    <div class="status {color}">
+        ESTADO DE LA CADENA · {riesgo}
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 # ============================================================
-# DECISIÓN LOGÍSTICA
+# CADENA 3D
 # ============================================================
 
-with tab4:
+st.markdown("### LIVE SUPPLY CHAIN")
 
-    st.markdown(
-        '<div class="section">Motor de Decisión Logística</div>',
-        unsafe_allow_html=True
+# Coordenadas principales
+nodes = {
+    "Proveedor": (-8, 1.5, 0),
+    "Planta CCU": (-4, 0, 1),
+    "CD Norte": (0, 3, 0),
+    "CD Centro": (0, 0, 0),
+    "CD Sur": (0, -3, 0),
+    "Puntos de venta": (5, 0, 1),
+    "Cliente": (8, 0, 0)
+}
+
+# ============================================================
+# FIGURA 3D
+# ============================================================
+
+fig = go.Figure()
+
+# ------------------------------------------------------------
+# CONEXIONES
+# ------------------------------------------------------------
+
+connections = [
+    ("Proveedor", "Planta CCU"),
+    ("Planta CCU", "CD Norte"),
+    ("Planta CCU", "CD Centro"),
+    ("Planta CCU", "CD Sur"),
+    ("CD Norte", "Puntos de venta"),
+    ("CD Centro", "Puntos de venta"),
+    ("CD Sur", "Puntos de venta"),
+    ("Puntos de venta", "Cliente")
+]
+
+for a, b in connections:
+
+    x = [nodes[a][0], nodes[b][0]]
+    y = [nodes[a][1], nodes[b][1]]
+    z = [nodes[a][2], nodes[b][2]]
+
+    fig.add_trace(
+        go.Scatter3d(
+            x=x,
+            y=y,
+            z=z,
+            mode="lines",
+            line=dict(
+                color="#248cc7",
+                width=5
+            ),
+            hoverinfo="none",
+            showlegend=False
+        )
     )
 
-    if riesgo == "ALTO":
+# ============================================================
+# NODOS
+# ============================================================
 
-        st.markdown(
-            f"""
-            <div class="danger">
-            <h3>⚠️ Riesgo alto de quiebre</h3>
-            La cobertura actual es de
-            <b>{cobertura_dias:.1f} días</b>,
-            inferior al requerimiento estimado de abastecimiento.
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+node_names = list(nodes.keys())
 
-    elif riesgo == "MEDIO":
+node_x = [nodes[n][0] for n in node_names]
+node_y = [nodes[n][1] for n in node_names]
+node_z = [nodes[n][2] for n in node_names]
 
-        st.markdown(
-            f"""
-            <div class="warning">
-            <h3>🟠 Riesgo moderado</h3>
-            Se recomienda monitorear la evolución de la demanda
-            y preparar una reposición preventiva.
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+# Color según estado
+node_colors = []
+
+for n in node_names:
+
+    if "CD" in n:
+
+        if riesgo == "CRÍTICO":
+            node_colors.append("#ff3030")
+
+        elif riesgo == "MONITOREAR":
+            node_colors.append("#ffaa00")
+
+        else:
+            node_colors.append("#00d9a0")
+
+    elif n == "Planta CCU":
+        node_colors.append("#4db8ff")
+
+    else:
+        node_colors.append("#7a8cff")
+
+fig.add_trace(
+    go.Scatter3d(
+        x=node_x,
+        y=node_y,
+        z=node_z,
+        mode="markers+text",
+        text=node_names,
+        textposition="top center",
+        marker=dict(
+            size=[
+                13 if n == "Planta CCU" else 9
+                for n in node_names
+            ],
+            color=node_colors,
+            opacity=.95,
+            line=dict(
+                color="white",
+                width=1
+            )
+        ),
+        hovertemplate="%{text}<extra></extra>",
+        showlegend=False
+    )
+)
+
+# ============================================================
+# PARTÍCULAS / FLUJO
+# ============================================================
+
+particle_count = int(
+    max(20, min(100, flujo_logistico / 8))
+)
+
+particle_x = []
+particle_y = []
+particle_z = []
+
+# Distribución dinámica de partículas
+for i in range(particle_count):
+
+    t = (i / particle_count)
+
+    # flujo planta -> distribución -> cliente
+    if t < 0.45:
+
+        local = t / 0.45
+
+        x = -4 + local * 4
+
+        branch = i % 3
+
+        if branch == 0:
+            y = 0 + local * 3
+        elif branch == 1:
+            y = 0
+        else:
+            y = 0 - local * 3
+
+        z = 1 - local
 
     else:
 
-        st.markdown(
-            f"""
-            <div class="success">
-            <h3>🟢 Situación controlada</h3>
-            La cobertura actual permite absorber la demanda
-            estimada bajo las condiciones del modelo.
-            </div>
-            """,
-            unsafe_allow_html=True
+        local = (t - 0.45) / 0.55
+
+        x = 0 + local * 8
+        y = 0
+        z = 0 + np.sin(local * np.pi) * 0.7
+
+    particle_x.append(x)
+    particle_y.append(y)
+    particle_z.append(z)
+
+fig.add_trace(
+    go.Scatter3d(
+        x=particle_x,
+        y=particle_y,
+        z=particle_z,
+        mode="markers",
+        marker=dict(
+            size=3,
+            color="#58d7ff",
+            opacity=.8
+        ),
+        hoverinfo="none",
+        showlegend=False
+    )
+)
+
+# ============================================================
+# CONFIGURACIÓN 3D
+# ============================================================
+
+fig.update_layout(
+
+    height=650,
+
+    paper_bgcolor="rgba(0,0,0,0)",
+
+    plot_bgcolor="rgba(0,0,0,0)",
+
+    margin=dict(
+        l=0,
+        r=0,
+        t=0,
+        b=0
+    ),
+
+    scene=dict(
+
+        bgcolor="rgba(0,0,0,0)",
+
+        xaxis=dict(
+            visible=False
+        ),
+
+        yaxis=dict(
+            visible=False
+        ),
+
+        zaxis=dict(
+            visible=False
+        ),
+
+        camera=dict(
+            eye=dict(
+                x=1.55,
+                y=1.55,
+                z=1.25
+            )
+        ),
+
+        aspectmode="manual",
+
+        aspectratio=dict(
+            x=2.3,
+            y=1.3,
+            z=.8
         )
+    )
+)
 
-    st.markdown("### Recomendación de reposición")
+st.plotly_chart(
+    fig,
+    use_container_width=True,
+    config={
+        "displayModeBar": False
+    }
+)
 
-    c1, c2, c3, c4 = st.columns(4)
+# ============================================================
+# EXPLICACIÓN AUTOMÁTICA
+# ============================================================
 
-    c1.metric(
-        "Demanda diaria",
-        f"{demanda_diaria:,.0f}"
+st.markdown("### Lectura del sistema")
+
+if riesgo == "ESTABLE":
+
+    mensaje = (
+        f"La demanda proyectada se encuentra en {forecast_prom:.0f} unidades/día. "
+        f"El inventario proyectado de {inventario_final:.0f} unidades "
+        f"se mantiene por encima del punto de reorden de {rop:.0f}. "
+        f"La cadena opera dentro de los parámetros definidos."
     )
 
-    c2.metric(
-        "Lead Time",
-        f"{lead_time_promedio:.1f} días"
+elif riesgo == "MONITOREAR":
+
+    mensaje = (
+        f"El inventario proyectado ({inventario_final:.0f}) "
+        f"se aproxima al punto de reorden ({rop:.0f}). "
+        f"El sistema identifica una necesidad potencial de reposición "
+        f"por aproximadamente {pedido_sugerido:.0f} unidades."
     )
 
-    c3.metric(
-        "Cobertura",
-        f"{cobertura_dias:.1f} días"
+else:
+
+    mensaje = (
+        f"La simulación detecta una condición crítica. "
+        f"La combinación de demanda de {demanda_real:.0f} unidades/día, "
+        f"lead time de {lead_real} días y capacidad logística de "
+        f"{capacidad_real}% genera presión sobre el inventario. "
+        f"Se recomienda priorizar la reposición."
     )
 
-    c4.metric(
-        "Pedido sugerido",
-        f"{pedido_sugerido:,.0f}"
+st.info(mensaje)
+
+# ============================================================
+# FLUJO PREDICTIVO
+# ============================================================
+
+st.markdown("### Motor de decisión")
+
+flow_cols = st.columns(5)
+
+flow_cols[0].markdown(
+    f"**01 · DEMANDA**\n\n{demanda_real:,.0f} / día"
+)
+
+flow_cols[1].markdown(
+    f"**02 · FORECAST**\n\n{forecast_prom:,.0f}"
+)
+
+flow_cols[2].markdown(
+    f"**03 · INVENTARIO**\n\n{inventario_final:,.0f}"
+)
+
+flow_cols[3].markdown(
+    f"**04 · ROP**\n\n{rop:,.0f}"
+)
+
+flow_cols[4].markdown(
+    f"**05 · DECISIÓN**\n\n{pedido_sugerido:,.0f} unidades"
+)
+
+# ============================================================
+# FORECAST
+# ============================================================
+
+with st.expander("Ver análisis predictivo"):
+
+    forecast_df = pd.DataFrame({
+        "Día": np.arange(1, 31),
+        "Demanda proyectada": forecast
+    })
+
+    st.line_chart(
+        forecast_df.set_index("Día")
     )
 
-    st.markdown("### Flujo de la cadena predictiva")
+# ============================================================
+# INVENTARIO
+# ============================================================
 
-    st.markdown("""
-    **Datos históricos**
-    ↓
-    **Pronóstico de demanda**
-    ↓
-    **Proyección de inventario**
-    ↓
-    **Cálculo de riesgo**
-    ↓
-    **Punto de reorden**
-    ↓
-    **Decisión de reposición**
-    """)
+with st.expander("Ver evolución del inventario"):
 
-    st.markdown("### Indicadores económicos")
+    inventario_sim = []
 
-    col1, col2 = st.columns(2)
+    stock = inventario_inicial
 
-    with col1:
-        st.metric(
-            "Inventario valorizado promedio",
-            f"${inventario_valorizado:,.0f}"
-        )
+    for d in range(30):
 
-    with col2:
-        ahorro_potencial = (
-            inventario_valorizado * 0.10
-        )
+        stock -= demanda_real
 
-        st.metric(
-            "Capital potencialmente optimizable*",
-            f"${ahorro_potencial:,.0f}"
-        )
+        if stock < rop:
 
-    st.caption(
-        "*Estimación referencial sobre el modelo simulado; "
-        "no corresponde a información financiera real de CCU."
+            stock += pedido_sugerido
+
+        inventario_sim.append(stock)
+
+    inv_df = pd.DataFrame({
+        "Día": np.arange(1, 31),
+        "Inventario": inventario_sim
+    })
+
+    st.line_chart(
+        inv_df.set_index("Día")
     )
-
 
 # ============================================================
 # FOOTER
@@ -694,13 +654,6 @@ with tab4:
 
 st.markdown("---")
 
-st.markdown(
-    """
-    **CCU — Cadena de Suministro Predictiva**
-
-    Plataforma demostrativa de analítica logística para
-    pronóstico de demanda, inventario y soporte a decisiones.
-
-    *Datos utilizados: simulación académica.*
-    """
+st.caption(
+    "CCU · Predictive Supply Chain · Modelo demostrativo de soporte a decisiones logísticas"
 )
