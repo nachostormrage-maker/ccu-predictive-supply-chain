@@ -1689,7 +1689,7 @@ st.markdown(
 
 
 # ============================================================
-# DIAGNÓSTICO AUTOMÁTICO
+# ¿QUÉ ESTÁ DICIENDO EL SISTEMA?
 # ============================================================
 
 st.markdown(
@@ -1698,63 +1698,77 @@ st.markdown(
 )
 
 
-# ============================================================
-# DIAGNÓSTICO DINÁMICO
-# ============================================================
-
 # ------------------------------------------------------------
 # 1. TENDENCIA DE DEMANDA
 # ------------------------------------------------------------
 
-periodo_reciente = min(30, len(df_fc))
+periodo_reciente_diag = min(
+    30,
+    len(df_fc)
+)
 
-demanda_reciente = (
+demanda_reciente_diag = (
     df_fc["demanda"]
-    .tail(periodo_reciente)
+    .tail(periodo_reciente_diag)
     .mean()
 )
 
-demanda_anterior = (
-    df_fc["demanda"]
-    .iloc[
-        -periodo_reciente * 2:
-        -periodo_reciente
-    ]
-    .mean()
-)
+if len(df_fc) >= periodo_reciente_diag * 2:
 
-if demanda_anterior > 0:
+    demanda_anterior_diag = (
+        df_fc["demanda"]
+        .iloc[
+            -periodo_reciente_diag * 2:
+            -periodo_reciente_diag
+        ]
+        .mean()
+    )
 
-    tendencia_demanda = (
-        (demanda_reciente - demanda_anterior)
-        / demanda_anterior
+else:
+
+    demanda_anterior_diag = (
+        df_fc["demanda"]
+        .head(periodo_reciente_diag)
+        .mean()
+    )
+
+
+if demanda_anterior_diag > 0:
+
+    tendencia_demanda_diag = (
+        (
+            demanda_reciente_diag -
+            demanda_anterior_diag
+        )
+        /
+        demanda_anterior_diag
     ) * 100
 
 else:
 
-    tendencia_demanda = 0
+    tendencia_demanda_diag = 0
 
 
-if tendencia_demanda >= 5:
+if tendencia_demanda_diag >= 5:
 
-    demanda_texto = (
+    demanda_diag = (
         f"La demanda presenta una tendencia creciente "
-        f"de {tendencia_demanda:.1f}% en el período reciente."
+        f"de {tendencia_demanda_diag:.1f}% en el período reciente."
     )
 
-elif tendencia_demanda <= -5:
+elif tendencia_demanda_diag <= -5:
 
-    demanda_texto = (
+    demanda_diag = (
         f"La demanda presenta una tendencia decreciente "
-        f"de {abs(tendencia_demanda):.1f}% en el período reciente."
+        f"de {abs(tendencia_demanda_diag):.1f}% en el período reciente."
     )
 
 else:
 
-    demanda_texto = (
+    demanda_diag = (
         f"La demanda mantiene una trayectoria relativamente "
         f"estable, con una variación reciente de "
-        f"{tendencia_demanda:+.1f}%."
+        f"{tendencia_demanda_diag:+.1f}%."
     )
 
 
@@ -1764,14 +1778,14 @@ else:
 
 if cobertura <= 2:
 
-    inventario_texto = (
+    inventario_diag = (
         f"El inventario tiene solo {cobertura:.1f} días "
         "de cobertura, situación crítica para la disponibilidad."
     )
 
 elif cobertura <= 5:
 
-    inventario_texto = (
+    inventario_diag = (
         f"El inventario tiene {cobertura:.1f} días "
         "de cobertura y presenta una presión elevada "
         "sobre la disponibilidad."
@@ -1779,14 +1793,14 @@ elif cobertura <= 5:
 
 elif cobertura <= 10:
 
-    inventario_texto = (
+    inventario_diag = (
         f"El inventario tiene {cobertura:.1f} días "
         "de cobertura y requiere seguimiento."
     )
 
 else:
 
-    inventario_texto = (
+    inventario_diag = (
         f"El inventario mantiene {cobertura:.1f} días "
         "de cobertura, proporcionando un nivel adecuado "
         "de disponibilidad."
@@ -1797,25 +1811,27 @@ else:
 # 3. SERVICIO
 # ------------------------------------------------------------
 
-objetivo_servicio = nivel_servicio_obj / 100
+objetivo_servicio_diag = (
+    nivel_servicio_obj / 100
+)
 
-brecha_servicio = (
+brecha_servicio_diag = (
     nivel_servicio_obj -
     fill_rate * 100
 )
 
 
-if fill_rate < objetivo_servicio:
+if fill_rate < objetivo_servicio_diag:
 
-    servicio_texto = (
+    servicio_diag = (
         f"El nivel de servicio ({fill_rate:.1%}) está "
         f"por debajo del objetivo ({nivel_servicio_obj}%), "
-        f"con una brecha de {brecha_servicio:.1f} puntos."
+        f"con una brecha de {brecha_servicio_diag:.1f} puntos."
     )
 
 else:
 
-    servicio_texto = (
+    servicio_diag = (
         f"El nivel de servicio ({fill_rate:.1%}) cumple "
         f"el objetivo configurado de {nivel_servicio_obj}%."
     )
@@ -1827,7 +1843,7 @@ else:
 
 if utilizacion >= 100:
 
-    logistica_texto = (
+    logistica_diag = (
         "La capacidad logística está completamente utilizada. "
         "El sistema identifica un posible cuello de botella "
         "operacional."
@@ -1835,14 +1851,14 @@ if utilizacion >= 100:
 
 elif utilizacion >= 90:
 
-    logistica_texto = (
+    logistica_diag = (
         f"La utilización logística es elevada ({utilizacion:.0f}%) "
         "y requiere seguimiento."
     )
 
 elif utilizacion >= 75:
 
-    logistica_texto = (
+    logistica_diag = (
         f"La utilización logística se encuentra en "
         f"{utilizacion:.0f}%, dentro de un rango de presión "
         "moderada."
@@ -1850,7 +1866,7 @@ elif utilizacion >= 75:
 
 else:
 
-    logistica_texto = (
+    logistica_diag = (
         f"La utilización logística se encuentra en "
         f"{utilizacion:.0f}%, dejando capacidad disponible."
     )
@@ -1862,14 +1878,14 @@ else:
 
 if riesgo_quiebre >= 75:
 
-    riesgo_texto = (
+    riesgo_diag = (
         f"El riesgo proyectado es crítico ({riesgo_quiebre:.1f}%). "
         "La disponibilidad futura requiere atención prioritaria."
     )
 
 elif riesgo_quiebre >= 50:
 
-    riesgo_texto = (
+    riesgo_diag = (
         f"El riesgo proyectado es elevado ({riesgo_quiebre:.1f}%). "
         "El sistema detecta una presión importante sobre "
         "la disponibilidad."
@@ -1877,14 +1893,14 @@ elif riesgo_quiebre >= 50:
 
 elif riesgo_quiebre >= 30:
 
-    riesgo_texto = (
+    riesgo_diag = (
         f"El riesgo proyectado es moderado ({riesgo_quiebre:.1f}%). "
         "Se recomienda monitorear inventario y reposición."
     )
 
 elif riesgo_quiebre >= 15:
 
-    riesgo_texto = (
+    riesgo_diag = (
         f"El riesgo proyectado es bajo-moderado "
         f"({riesgo_quiebre:.1f}%). Se recomienda mantener "
         "seguimiento preventivo."
@@ -1892,7 +1908,7 @@ elif riesgo_quiebre >= 15:
 
 else:
 
-    riesgo_texto = (
+    riesgo_diag = (
         f"El riesgo proyectado es bajo ({riesgo_quiebre:.1f}%). "
         "No se observa una presión relevante sobre "
         "la disponibilidad."
@@ -1905,105 +1921,188 @@ else:
 
 if riesgo_quiebre >= 75:
 
-    diagnostico = "CRÍTICO"
-    diagnostico_color = "#dc2626"
+    diagnostico_visual = "CRÍTICO"
+    diagnostico_visual_color = "#dc2626"
 
 elif riesgo_quiebre >= 50:
 
-    diagnostico = "ALTO"
-    diagnostico_color = "#ea580c"
+    diagnostico_visual = "ALTO"
+    diagnostico_visual_color = "#ea580c"
 
 elif riesgo_quiebre >= 30:
 
-    diagnostico = "MODERADO"
-    diagnostico_color = "#d97706"
+    diagnostico_visual = "MODERADO"
+    diagnostico_visual_color = "#d97706"
 
 else:
 
-    diagnostico = "CONTROLADO"
-    diagnostico_color = "#16a34a"
+    diagnostico_visual = "CONTROLADO"
+    diagnostico_visual_color = "#16a34a"
 
 
 # ------------------------------------------------------------
-# 7. DIAGNÓSTICO VISUAL
+# 7. TARJETA VISUAL
 # ------------------------------------------------------------
 
 st.markdown(
     f"""
     <div style="
-        background:white;
-        border:1px solid #e2e8f0;
-        border-radius:14px;
-        padding:22px;
+        background:#ffffff;
+        border:1px solid #dbe3ec;
+        border-radius:16px;
+        padding:26px 28px;
         margin-top:8px;
-        box-shadow:0 2px 8px rgba(15,23,42,.04);
+        margin-bottom:20px;
+        box-shadow:0 3px 12px rgba(15,23,42,0.06);
     ">
 
         <div style="
             display:flex;
             justify-content:space-between;
             align-items:center;
-            margin-bottom:20px;
+            margin-bottom:24px;
+            padding-bottom:16px;
+            border-bottom:1px solid #eef2f7;
         ">
 
-            <div class="diagnostico-title" style="
-                font-size:19px;
+            <div style="
+                font-size:20px;
                 font-weight:800;
                 color:#123b5d;
             ">
                 Diagnóstico automático
             </div>
 
-            <div class="status-pill" style="
-                background:{diagnostico_color};
-                color:white;
-                padding:7px 16px;
-                border-radius:20px;
-                font-size:12px;
+            <div style="
+                background:{diagnostico_visual_color};
+                color:#ffffff;
+                padding:7px 17px;
+                border-radius:999px;
+                font-size:11px;
                 font-weight:800;
+                letter-spacing:0.5px;
             ">
-                {diagnostico}
+                {diagnostico_visual}
             </div>
 
         </div>
 
-        <div class="diagnostico-text" style="
+        <div style="
             color:#334155;
-            line-height:1.7;
             font-size:14px;
+            line-height:1.65;
         ">
 
-            <b>Demanda</b><br>
-            {demanda_texto}
+            <div style="margin-bottom:20px;">
 
-            <br><br>
+                <div style="
+                    color:#123b5d;
+                    font-weight:800;
+                    margin-bottom:5px;
+                ">
+                    Demanda
+                </div>
 
-            <b>Inventario</b><br>
-            {inventario_texto}
+                <div>
+                    {demanda_diag}
+                </div>
 
-            <br><br>
+            </div>
 
-            <b>Servicio</b><br>
-            {servicio_texto}
 
-            <br><br>
+            <div style="margin-bottom:20px;">
 
-            <b>Logística</b><br>
-            {logistica_texto}
+                <div style="
+                    color:#123b5d;
+                    font-weight:800;
+                    margin-bottom:5px;
+                ">
+                    Inventario
+                </div>
 
-            <br><br>
+                <div>
+                    {inventario_diag}
+                </div>
 
-            <b>Riesgo</b><br>
-            {riesgo_texto}
+            </div>
 
-            <br><br>
 
-            <b>Acción analítica</b><br>
-            El modelo combina demanda, inventario,
-            capacidad, lead time y nivel de servicio
-            para anticipar necesidades de reposición
-            y detectar presión operacional antes de
-            que se materialice.
+            <div style="margin-bottom:20px;">
+
+                <div style="
+                    color:#123b5d;
+                    font-weight:800;
+                    margin-bottom:5px;
+                ">
+                    Servicio
+                </div>
+
+                <div>
+                    {servicio_diag}
+                </div>
+
+            </div>
+
+
+            <div style="margin-bottom:20px;">
+
+                <div style="
+                    color:#123b5d;
+                    font-weight:800;
+                    margin-bottom:5px;
+                ">
+                    Logística
+                </div>
+
+                <div>
+                    {logistica_diag}
+                </div>
+
+            </div>
+
+
+            <div style="margin-bottom:20px;">
+
+                <div style="
+                    color:#123b5d;
+                    font-weight:800;
+                    margin-bottom:5px;
+                ">
+                    Riesgo
+                </div>
+
+                <div>
+                    {riesgo_diag}
+                </div>
+
+            </div>
+
+
+            <div style="
+                margin-top:24px;
+                padding:16px 18px;
+                background:#f8fafc;
+                border-left:4px solid #176b9c;
+                border-radius:8px;
+            ">
+
+                <div style="
+                    color:#123b5d;
+                    font-weight:800;
+                    margin-bottom:5px;
+                ">
+                    Acción analítica
+                </div>
+
+                <div>
+                    El modelo combina demanda, inventario,
+                    capacidad, lead time y nivel de servicio
+                    para anticipar necesidades de reposición
+                    y detectar presión operacional antes de
+                    que se materialice.
+                </div>
+
+            </div>
 
         </div>
 
@@ -2367,19 +2466,19 @@ def generar_pdf():
                 {diagnostico_estado}<br/><br/>
 
                 <b>Demanda:</b>
-                {demanda_texto}<br/><br/>
+                {demanda_diag}<br/><br/>
 
                 <b>Inventario:</b>
-                {inventario_texto}<br/><br/>
+                {inventario_diag}<br/><br/>
 
                 <b>Servicio:</b>
-                {servicio_texto}<br/><br/>
+                {servicio_diag}<br/><br/>
 
                 <b>Logística:</b>
-                {logistica_texto}<br/><br/>
+                {logistica_diag}<br/><br/>
 
                 <b>Riesgo:</b>
-                {riesgo_texto}
+                {riesgo_diag}
                 """,
                 styles["BodyText"]
             )
