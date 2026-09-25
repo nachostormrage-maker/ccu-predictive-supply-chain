@@ -1697,33 +1697,281 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+
+# ============================================================
+# DIAGNÓSTICO DINÁMICO
+# ============================================================
+
+# ------------------------------------------------------------
+# 1. TENDENCIA DE DEMANDA
+# ------------------------------------------------------------
+
+periodo_reciente = min(30, len(df_fc))
+
+demanda_reciente = (
+    df_fc["demanda"]
+    .tail(periodo_reciente)
+    .mean()
+)
+
+demanda_anterior = (
+    df_fc["demanda"]
+    .iloc[
+        -periodo_reciente * 2:
+        -periodo_reciente
+    ]
+    .mean()
+)
+
+if demanda_anterior > 0:
+
+    tendencia_demanda = (
+        (demanda_reciente - demanda_anterior)
+        / demanda_anterior
+    ) * 100
+
+else:
+
+    tendencia_demanda = 0
+
+
+if tendencia_demanda >= 5:
+
+    demanda_texto = (
+        f"La demanda presenta una tendencia creciente "
+        f"de {tendencia_demanda:.1f}% en el período reciente."
+    )
+
+elif tendencia_demanda <= -5:
+
+    demanda_texto = (
+        f"La demanda presenta una tendencia decreciente "
+        f"de {abs(tendencia_demanda):.1f}% en el período reciente."
+    )
+
+else:
+
+    demanda_texto = (
+        f"La demanda mantiene una trayectoria relativamente "
+        f"estable, con una variación reciente de "
+        f"{tendencia_demanda:+.1f}%."
+    )
+
+
+# ------------------------------------------------------------
+# 2. INVENTARIO
+# ------------------------------------------------------------
+
+if cobertura <= 2:
+
+    inventario_texto = (
+        f"El inventario tiene solo {cobertura:.1f} días "
+        "de cobertura, situación crítica para la disponibilidad."
+    )
+
+elif cobertura <= 5:
+
+    inventario_texto = (
+        f"El inventario tiene {cobertura:.1f} días "
+        "de cobertura y presenta una presión elevada "
+        "sobre la disponibilidad."
+    )
+
+elif cobertura <= 10:
+
+    inventario_texto = (
+        f"El inventario tiene {cobertura:.1f} días "
+        "de cobertura y requiere seguimiento."
+    )
+
+else:
+
+    inventario_texto = (
+        f"El inventario mantiene {cobertura:.1f} días "
+        "de cobertura, proporcionando un nivel adecuado "
+        "de disponibilidad."
+    )
+
+
+# ------------------------------------------------------------
+# 3. SERVICIO
+# ------------------------------------------------------------
+
+objetivo_servicio = nivel_servicio_obj / 100
+
+brecha_servicio = (
+    nivel_servicio_obj -
+    fill_rate * 100
+)
+
+
+if fill_rate < objetivo_servicio:
+
+    servicio_texto = (
+        f"El nivel de servicio ({fill_rate:.1%}) está "
+        f"por debajo del objetivo ({nivel_servicio_obj}%), "
+        f"con una brecha de {brecha_servicio:.1f} puntos."
+    )
+
+else:
+
+    servicio_texto = (
+        f"El nivel de servicio ({fill_rate:.1%}) cumple "
+        f"el objetivo configurado de {nivel_servicio_obj}%."
+    )
+
+
+# ------------------------------------------------------------
+# 4. LOGÍSTICA
+# ------------------------------------------------------------
+
+if utilizacion >= 100:
+
+    logistica_texto = (
+        "La capacidad logística está completamente utilizada. "
+        "El sistema identifica un posible cuello de botella "
+        "operacional."
+    )
+
+elif utilizacion >= 90:
+
+    logistica_texto = (
+        f"La utilización logística es elevada ({utilizacion:.0f}%) "
+        "y requiere seguimiento."
+    )
+
+elif utilizacion >= 75:
+
+    logistica_texto = (
+        f"La utilización logística se encuentra en "
+        f"{utilizacion:.0f}%, dentro de un rango de presión "
+        "moderada."
+    )
+
+else:
+
+    logistica_texto = (
+        f"La utilización logística se encuentra en "
+        f"{utilizacion:.0f}%, dejando capacidad disponible."
+    )
+
+
+# ------------------------------------------------------------
+# 5. RIESGO
+# ------------------------------------------------------------
+
+if riesgo_quiebre >= 75:
+
+    riesgo_texto = (
+        f"El riesgo proyectado es crítico ({riesgo_quiebre:.1f}%). "
+        "La disponibilidad futura requiere atención prioritaria."
+    )
+
+elif riesgo_quiebre >= 50:
+
+    riesgo_texto = (
+        f"El riesgo proyectado es elevado ({riesgo_quiebre:.1f}%). "
+        "El sistema detecta una presión importante sobre "
+        "la disponibilidad."
+    )
+
+elif riesgo_quiebre >= 30:
+
+    riesgo_texto = (
+        f"El riesgo proyectado es moderado ({riesgo_quiebre:.1f}%). "
+        "Se recomienda monitorear inventario y reposición."
+    )
+
+elif riesgo_quiebre >= 15:
+
+    riesgo_texto = (
+        f"El riesgo proyectado es bajo-moderado "
+        f"({riesgo_quiebre:.1f}%). Se recomienda mantener "
+        "seguimiento preventivo."
+    )
+
+else:
+
+    riesgo_texto = (
+        f"El riesgo proyectado es bajo ({riesgo_quiebre:.1f}%). "
+        "No se observa una presión relevante sobre "
+        "la disponibilidad."
+    )
+
+
+# ------------------------------------------------------------
+# 6. ESTADO DEL DIAGNÓSTICO
+# ------------------------------------------------------------
+
+if riesgo_quiebre >= 75:
+
+    diagnostico = "CRÍTICO"
+    diagnostico_color = "#dc2626"
+
+elif riesgo_quiebre >= 50:
+
+    diagnostico = "ALTO"
+    diagnostico_color = "#ea580c"
+
+elif riesgo_quiebre >= 30:
+
+    diagnostico = "MODERADO"
+    diagnostico_color = "#d97706"
+
+else:
+
+    diagnostico = "CONTROLADO"
+    diagnostico_color = "#16a34a"
+
+
+# ------------------------------------------------------------
+# 7. DIAGNÓSTICO VISUAL
+# ------------------------------------------------------------
+
 st.markdown(
     f"""
-    <div class="diagnostico">
+    <div style="
+        background:white;
+        border:1px solid #e2e8f0;
+        border-radius:14px;
+        padding:22px;
+        margin-top:8px;
+        box-shadow:0 2px 8px rgba(15,23,42,.04);
+    ">
 
         <div style="
             display:flex;
             justify-content:space-between;
             align-items:center;
-            margin-bottom:18px;
+            margin-bottom:20px;
         ">
 
-            <div class="diagnostico-title">
+            <div class="diagnostico-title" style="
+                font-size:19px;
+                font-weight:800;
+                color:#123b5d;
+            ">
                 Diagnóstico automático
             </div>
 
-            <div
-                class="status-pill"
-                style="
-                    background:{diagnostico_color};
-                "
-            >
-                {diagnostico_estado}
+            <div class="status-pill" style="
+                background:{diagnostico_color};
+                color:white;
+                padding:7px 16px;
+                border-radius:20px;
+                font-size:12px;
+                font-weight:800;
+            ">
+                {diagnostico}
             </div>
 
         </div>
 
-        <div class="diagnostico-text">
+        <div class="diagnostico-text" style="
+            color:#334155;
+            line-height:1.7;
+            font-size:14px;
+        ">
 
             <b>Demanda</b><br>
             {demanda_texto}
