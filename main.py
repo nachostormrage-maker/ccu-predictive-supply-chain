@@ -3,8 +3,10 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import io
+from datetime import datetime
 
 from sklearn.linear_model import LinearRegression
+
 
 # ============================================================
 # CONFIGURACIÓN
@@ -16,6 +18,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
 
 # ============================================================
 # ESTILO
@@ -85,12 +88,34 @@ st.markdown("""
     border-bottom: 1px solid #e2e8f0;
 }
 
-.flow-card {
-    background: white;
-    border-radius: 14px;
-    padding: 15px;
-    text-align: center;
-    border: 1px solid #e2e8f0;
+.realtime {
+    background: linear-gradient(
+        90deg,
+        #ecfdf5,
+        #f0fdfa
+    );
+    border: 1px solid #a7f3d0;
+    color: #065f46;
+    border-radius: 10px;
+    padding: 9px 15px;
+    margin-bottom: 18px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.signal-green {
+    color: #16a34a;
+    font-weight: 800;
+}
+
+.signal-yellow {
+    color: #d97706;
+    font-weight: 800;
+}
+
+.signal-red {
+    color: #dc2626;
+    font-weight: 800;
 }
 
 .small-note {
@@ -310,7 +335,6 @@ def optimizar_inventario(
     )
 
     costo_pedir = 45000
-
     costo_mantener = 3300
 
     eoq = np.sqrt(
@@ -332,10 +356,13 @@ def optimizar_inventario(
 
     if servicio >= 97:
         z = 1.88
+
     elif servicio >= 95:
         z = 1.65
+
     elif servicio >= 90:
         z = 1.28
+
     else:
         z = 1.04
 
@@ -441,7 +468,6 @@ df_base = generar_dataset()
 demanda_extra = demanda_factor / 100
 
 capacidad_real = capacidad
-
 lead_time_real = lead_time
 
 
@@ -453,16 +479,13 @@ if escenario == "Aumento de demanda":
 elif escenario == "Restricción logística":
 
     capacidad_real *= 0.70
-
     lead_time_real += 3
 
 
 elif escenario == "Alta demanda + restricción":
 
     demanda_extra += 0.25
-
     capacidad_real *= 0.70
-
     lead_time_real += 3
 
 
@@ -578,31 +601,105 @@ riesgo_quiebre = max(
 
 
 # ============================================================
-# ESTADO
+# ESTADO GENERAL
 # ============================================================
 
+# IMPORTANTE:
+# El estado ahora considera TODOS los indicadores.
+# No puede quedar "ESTABLE" si hay señales críticas.
+
 if (
-    riesgo_quiebre < 15
-    and
-    fill_rate >=
-    nivel_servicio_obj / 100
+    fill_rate < nivel_servicio_obj / 100
+    and riesgo_quiebre >= 30
 ):
 
-    estado = "ESTABLE"
+    estado = "RIESGO CRÍTICO"
+    color_estado = "#dc2626"
 
-    color_estado = "#16a34a"
+elif (
+    fill_rate < nivel_servicio_obj / 100
+    or riesgo_quiebre >= 30
+    or cobertura < 5
+    or utilizacion >= 100
+):
 
-elif riesgo_quiebre < 30:
+    estado = "RIESGO"
+    color_estado = "#dc2626"
+
+elif (
+    riesgo_quiebre >= 15
+    or fill_rate < 0.90
+    or cobertura < 10
+):
 
     estado = "MONITOREAR"
-
     color_estado = "#f59e0b"
 
 else:
 
-    estado = "RIESGO"
+    estado = "ESTABLE"
+    color_estado = "#16a34a"
 
-    color_estado = "#dc2626"
+
+# ============================================================
+# COLORES DINÁMICOS KPI
+# ============================================================
+
+def color_servicio(valor, objetivo):
+
+    if valor >= objetivo:
+        return "#16a34a"
+
+    elif valor >= objetivo - 0.05:
+        return "#f59e0b"
+
+    return "#dc2626"
+
+
+def color_riesgo(valor):
+
+    if valor < 15:
+        return "#16a34a"
+
+    elif valor < 30:
+        return "#f59e0b"
+
+    return "#dc2626"
+
+
+def color_cobertura(valor):
+
+    if valor >= 10:
+        return "#16a34a"
+
+    elif valor >= 5:
+        return "#f59e0b"
+
+    return "#dc2626"
+
+
+color_servicio_actual = color_servicio(
+    fill_rate,
+    nivel_servicio_obj / 100
+)
+
+color_riesgo_actual = color_riesgo(
+    riesgo_quiebre
+)
+
+color_cobertura_actual = color_cobertura(
+    cobertura
+)
+
+color_utilizacion = (
+    "#dc2626"
+    if utilizacion >= 100
+    else
+    "#f59e0b"
+    if utilizacion >= 90
+    else
+    "#16a34a"
+)
 
 
 # ============================================================
@@ -613,6 +710,17 @@ optim = optimizar_inventario(
     demanda_promedio,
     lead_time_real,
     nivel_servicio_obj
+)
+
+
+# ============================================================
+# FECHA / HORA DE ACTUALIZACIÓN
+# ============================================================
+
+ahora = datetime.now()
+
+hora_actualizacion = ahora.strftime(
+    "%d-%m-%Y %H:%M:%S"
 )
 
 
@@ -634,6 +742,19 @@ st.markdown(
     <div class="subtitle">
     Sistema ejecutivo de monitoreo, predicción y simulación
     de la cadena de suministro.
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    f"""
+    <div class="realtime">
+    🟢 MOTOR PREDICTIVO ACTIVO
+    &nbsp; | &nbsp;
+    Última actualización: {hora_actualizacion}
+    &nbsp; | &nbsp;
+    Parámetros recalculados en tiempo real
     </div>
     """,
     unsafe_allow_html=True
@@ -692,13 +813,15 @@ with c1:
 
     st.markdown(
         f"""
-        <div class="metric-box">
+        <div class="metric-box"
+        style="border-top:4px solid {color_servicio_actual};">
 
         <div class="metric-title">
         Nivel de servicio
         </div>
 
-        <div class="metric-value">
+        <div class="metric-value"
+        style="color:{color_servicio_actual};">
         {fill_rate:.1%}
         </div>
 
@@ -716,7 +839,8 @@ with c2:
 
     st.markdown(
         f"""
-        <div class="metric-box">
+        <div class="metric-box"
+        style="border-top:4px solid #176b9c;">
 
         <div class="metric-title">
         Demanda promedio
@@ -740,13 +864,15 @@ with c3:
 
     st.markdown(
         f"""
-        <div class="metric-box">
+        <div class="metric-box"
+        style="border-top:4px solid {color_cobertura_actual};">
 
         <div class="metric-title">
         Inventario
         </div>
 
-        <div class="metric-value">
+        <div class="metric-value"
+        style="color:{color_cobertura_actual};">
         {inventario_actual:,.0f}
         </div>
 
@@ -764,13 +890,15 @@ with c4:
 
     st.markdown(
         f"""
-        <div class="metric-box">
+        <div class="metric-box"
+        style="border-top:4px solid {color_utilizacion};">
 
         <div class="metric-title">
         Utilización logística
         </div>
 
-        <div class="metric-value">
+        <div class="metric-value"
+        style="color:{color_utilizacion};">
         {utilizacion:.0f}%
         </div>
 
@@ -788,13 +916,15 @@ with c5:
 
     st.markdown(
         f"""
-        <div class="metric-box">
+        <div class="metric-box"
+        style="border-top:4px solid {color_riesgo_actual};">
 
         <div class="metric-title">
         Riesgo de quiebre
         </div>
 
-        <div class="metric-value">
+        <div class="metric-value"
+        style="color:{color_riesgo_actual};">
         {riesgo_quiebre:.1f}%
         </div>
 
@@ -844,15 +974,12 @@ colores = []
 for valor in valores:
 
     if valor >= 90:
-
         colores.append("#16a34a")
 
     elif valor >= 70:
-
         colores.append("#f59e0b")
 
     else:
-
         colores.append("#dc2626")
 
 
@@ -1148,58 +1275,352 @@ st.markdown(
 )
 
 
-if riesgo_quiebre >= 30:
+# ------------------------------------------------------------
+# ANÁLISIS REAL DE CADA INDICADOR
+# ------------------------------------------------------------
 
-    mensaje = f"""
-    <b>La cadena presenta presión operacional.</b><br><br>
+problemas = []
+señales = []
 
-    El escenario <b>{escenario}</b> genera una reducción
-    de cobertura y aumenta la presión sobre inventario,
-    transporte y nivel de servicio.
+if fill_rate < nivel_servicio_obj / 100:
 
-    <br><br>
+    problemas.append(
+        f"el nivel de servicio está por debajo del objetivo "
+        f"({fill_rate:.1%} vs {nivel_servicio_obj}%)"
+    )
 
-    <b>Señal principal:</b>
-    riesgo de quiebre de {riesgo_quiebre:.1f}%.
-    """
+    señales.append("servicio")
 
+
+if cobertura < 5:
+
+    problemas.append(
+        f"la cobertura es crítica ({cobertura:.1f} días)"
+    )
+
+    señales.append("inventario")
 
 elif cobertura < 10:
 
-    mensaje = f"""
-    <b>La cadena requiere monitoreo.</b><br><br>
+    problemas.append(
+        f"la cobertura es reducida ({cobertura:.1f} días)"
+    )
 
-    La cobertura proyectada alcanza
-    <b>{cobertura:.1f} días</b>.
+    señales.append("inventario")
 
-    Se recomienda revisar anticipadamente
-    reposición, transporte y planificación
-    de demanda.
-    """
 
+if utilizacion >= 100:
+
+    problemas.append(
+        "la capacidad logística está completamente utilizada"
+    )
+
+    señales.append("logística")
+
+elif utilizacion >= 90:
+
+    problemas.append(
+        f"la utilización logística es elevada ({utilizacion:.0f}%)"
+    )
+
+    señales.append("logística")
+
+
+if riesgo_quiebre >= 50:
+
+    problemas.append(
+        f"el riesgo proyectado es crítico ({riesgo_quiebre:.1f}%)"
+    )
+
+    señales.append("riesgo")
+
+elif riesgo_quiebre >= 30:
+
+    problemas.append(
+        f"el riesgo proyectado es elevado ({riesgo_quiebre:.1f}%)"
+    )
+
+    señales.append("riesgo")
+
+
+# ------------------------------------------------------------
+# TENDENCIA DEL FORECAST
+# ------------------------------------------------------------
+
+forecast_promedio = (
+    df_fc["forecast"]
+    .tail(30)
+    .mean()
+)
+
+variacion_forecast = (
+    (
+        forecast_promedio -
+        demanda_promedio
+    )
+    /
+    max(
+        demanda_promedio,
+        1
+    )
+) * 100
+
+
+if variacion_forecast > 5:
+
+    lectura_forecast = (
+        "El modelo detecta una tendencia creciente "
+        "de demanda."
+    )
+
+elif variacion_forecast < -5:
+
+    lectura_forecast = (
+        "El modelo detecta una tendencia decreciente "
+        "de demanda."
+    )
 
 else:
 
-    mensaje = f"""
-    <b>La cadena opera dentro de parámetros controlados.</b><br><br>
+    lectura_forecast = (
+        "El modelo proyecta una demanda relativamente estable."
+    )
 
-    La simulación proyecta
-    <b>{cobertura:.1f} días de cobertura</b>
-    y un nivel de servicio de
-    <b>{fill_rate:.1%}</b>.
 
-    El modelo no identifica actualmente
-    una presión crítica.
-    """
+# ------------------------------------------------------------
+# MENSAJE EJECUTIVO DINÁMICO
+# ------------------------------------------------------------
+
+if len(problemas) >= 3:
+
+    titulo_lectura = (
+        "La simulación identifica múltiples presiones "
+        "operacionales."
+    )
+
+    color_lectura = "#dc2626"
+
+elif len(problemas) >= 1:
+
+    titulo_lectura = (
+        "La simulación identifica señales que requieren "
+        "monitoreo."
+    )
+
+    color_lectura = "#f59e0b"
+
+else:
+
+    titulo_lectura = (
+        "La simulación se mantiene dentro de los "
+        "parámetros definidos."
+    )
+
+    color_lectura = "#16a34a"
+
+
+detalle_problemas = ""
+
+if problemas:
+
+    detalle_problemas = (
+        "<br><br><b>Principales señales:</b><br>"
+        +
+        "<br>".join(
+            [
+                f"• {p}"
+                for p in problemas
+            ]
+        )
+    )
+
+else:
+
+    detalle_problemas = (
+        "<br><br>Los principales indicadores "
+        "se encuentran dentro de los rangos definidos."
+    )
 
 
 st.markdown(
     f"""
-    <div class="executive">
-    {mensaje}
+    <div class="executive"
+    style="border-left-color:{color_lectura};">
+
+    <div style="
+        color:{color_lectura};
+        font-size:18px;
+        font-weight:800;
+    ">
+    {titulo_lectura}
+    </div>
+
+    <br>
+
+    <b>Demanda:</b>
+    {lectura_forecast}
+
+    {detalle_problemas}
+
+    <br><br>
+
+    <b>Lectura del modelo:</b>
+    La combinación entre demanda, inventario,
+    capacidad logística, lead time y nivel de servicio
+    determina la presión operacional proyectada.
+
     </div>
     """,
     unsafe_allow_html=True
+)
+
+
+# ============================================================
+# EXPLICACIÓN AUTOMÁTICA
+# ============================================================
+
+st.markdown(
+    '<div class="section">¿Qué está diciendo el sistema?</div>',
+    unsafe_allow_html=True
+)
+
+
+# Demanda
+
+if variacion_forecast > 5:
+
+    demanda_texto = (
+        f"La demanda presenta una señal creciente. "
+        f"El forecast se encuentra aproximadamente "
+        f"{variacion_forecast:.1f}% sobre la demanda promedio."
+    )
+
+elif variacion_forecast < -5:
+
+    demanda_texto = (
+        f"La demanda presenta una señal decreciente. "
+        f"El forecast se encuentra aproximadamente "
+        f"{abs(variacion_forecast):.1f}% bajo la demanda promedio."
+    )
+
+else:
+
+    demanda_texto = (
+        "La demanda proyectada mantiene una trayectoria "
+        "relativamente estable."
+    )
+
+
+# Inventario
+
+if cobertura < 5:
+
+    inventario_texto = (
+        f"El inventario tiene solo {cobertura:.1f} días "
+        "de cobertura, señal de presión sobre disponibilidad."
+    )
+
+elif cobertura < 10:
+
+    inventario_texto = (
+        f"El inventario tiene {cobertura:.1f} días "
+        "de cobertura y requiere seguimiento."
+    )
+
+else:
+
+    inventario_texto = (
+        f"El inventario mantiene {cobertura:.1f} días "
+        "de cobertura."
+    )
+
+
+# Servicio
+
+if fill_rate < nivel_servicio_obj / 100:
+
+    servicio_texto = (
+        f"El nivel de servicio ({fill_rate:.1%}) está "
+        f"por debajo del objetivo ({nivel_servicio_obj}%)."
+    )
+
+else:
+
+    servicio_texto = (
+        f"El nivel de servicio ({fill_rate:.1%}) "
+        "cumple el objetivo configurado."
+    )
+
+
+# Logística
+
+if utilizacion >= 100:
+
+    logistica_texto = (
+        "La capacidad logística está en el límite "
+        "operacional."
+    )
+
+elif utilizacion >= 90:
+
+    logistica_texto = (
+        f"La utilización logística es elevada ({utilizacion:.0f}%)."
+    )
+
+else:
+
+    logistica_texto = (
+        f"La utilización logística se encuentra "
+        f"en {utilizacion:.0f}%."
+    )
+
+
+# Riesgo
+
+if riesgo_quiebre >= 50:
+
+    riesgo_texto = (
+        f"El riesgo proyectado es crítico ({riesgo_quiebre:.1f}%). "
+        "La disponibilidad futura requiere atención prioritaria."
+    )
+
+elif riesgo_quiebre >= 30:
+
+    riesgo_texto = (
+        f"El riesgo proyectado es elevado ({riesgo_quiebre:.1f}%). "
+        "El sistema detecta presión sobre la disponibilidad."
+    )
+
+elif riesgo_quiebre >= 15:
+
+    riesgo_texto = (
+        f"El riesgo proyectado es moderado ({riesgo_quiebre:.1f}%)."
+    )
+
+else:
+
+    riesgo_texto = (
+        f"El riesgo proyectado se mantiene bajo "
+        f"({riesgo_quiebre:.1f}%)."
+    )
+
+
+st.info(
+    f"""
+    **Demanda:** {demanda_texto}
+
+    **Inventario:** {inventario_texto}
+
+    **Servicio:** {servicio_texto}
+
+    **Logística:** {logistica_texto}
+
+    **Riesgo:** {riesgo_texto}
+
+    **Acción analítica:** el modelo combina estas señales
+    para anticipar necesidades de reposición, capacidad
+    y nivel de servicio.
+    """
 )
 
 
@@ -1240,78 +1661,6 @@ with c3:
 
 
 # ============================================================
-# EXPLICACIÓN AUTOMÁTICA
-# ============================================================
-
-st.markdown(
-    '<div class="section">¿Qué está diciendo el sistema?</div>',
-    unsafe_allow_html=True
-)
-
-
-forecast_promedio = (
-    df_fc["forecast"]
-    .tail(30)
-    .mean()
-)
-
-variacion_forecast = (
-    (
-        forecast_promedio -
-        demanda_promedio
-    )
-    /
-    max(
-        demanda_promedio,
-        1
-    )
-) * 100
-
-
-if variacion_forecast > 5:
-
-    lectura_forecast = (
-        "El modelo detecta una tendencia "
-        "creciente de demanda."
-    )
-
-elif variacion_forecast < -5:
-
-    lectura_forecast = (
-        "El modelo detecta una tendencia "
-        "decreciente de demanda."
-    )
-
-else:
-
-    lectura_forecast = (
-        "El modelo proyecta una demanda "
-        "relativamente estable."
-    )
-
-
-st.info(
-    f"""
-    **Demanda:** {lectura_forecast}
-
-    **Inventario:** {cobertura:.1f} días de cobertura.
-
-    **Servicio:** {fill_rate:.1%}, frente a un objetivo
-    de {nivel_servicio_obj}%.
-
-    **Logística:** utilización estimada de
-    {utilizacion:.0f}%.
-
-    **Riesgo:** {riesgo_quiebre:.1f}% de presión
-    proyectada sobre disponibilidad.
-
-    **Acción analítica:** el modelo utiliza estas variables
-    para anticipar necesidades de reposición.
-    """
-)
-
-
-# ============================================================
 # INFORME PDF
 # ============================================================
 
@@ -1338,9 +1687,11 @@ def generar_pdf():
             TableStyle
         )
         from reportlab.lib.styles import (
-            getSampleStyleSheet
+            getSampleStyleSheet,
+            ParagraphStyle
         )
         from reportlab.lib import colors
+        from reportlab.lib.enums import TA_CENTER
 
         buffer = io.BytesIO()
 
@@ -1355,19 +1706,113 @@ def generar_pdf():
 
         styles = getSampleStyleSheet()
 
+        titulo = ParagraphStyle(
+            "TituloCCU",
+            parent=styles["Title"],
+            alignment=TA_CENTER,
+            textColor=colors.HexColor(
+                "#123b5d"
+            ),
+            fontSize=22
+        )
+
+        subtitulo = ParagraphStyle(
+            "SubtituloCCU",
+            parent=styles["Heading2"],
+            alignment=TA_CENTER,
+            textColor=colors.HexColor(
+                "#176b9c"
+            ),
+            fontSize=13
+        )
+
         contenido = []
+
+        # ----------------------------------------------------
+        # PORTADA
+        # ----------------------------------------------------
 
         contenido.append(
             Paragraph(
-                "CCU | Predictive Supply Chain",
-                styles["Title"]
+                "CCU | PREDICTIVE SUPPLY CHAIN",
+                titulo
             )
         )
 
         contenido.append(
             Paragraph(
                 "Informe Ejecutivo de Cadena de Suministro",
+                subtitulo
+            )
+        )
+
+        contenido.append(
+            Spacer(1, 12)
+        )
+
+        contenido.append(
+            Paragraph(
+                f"""
+                <b>Fecha de generación:</b>
+                {hora_actualizacion}<br/>
+
+                <b>Escenario:</b>
+                {escenario}<br/>
+
+                <b>Estado del sistema:</b>
+                {estado}<br/>
+
+                <b>Motor:</b>
+                Modelo predictivo + simulación operacional
+                """,
+                styles["BodyText"]
+            )
+        )
+
+        contenido.append(
+            Spacer(1, 18)
+        )
+
+        # ----------------------------------------------------
+        # PROYECTO
+        # ----------------------------------------------------
+
+        contenido.append(
+            Paragraph(
+                "1. Descripción del proyecto",
                 styles["Heading2"]
+            )
+        )
+
+        contenido.append(
+            Paragraph(
+                """
+                CCU Predictive Supply Chain es un sistema
+                académico de soporte a decisiones orientado
+                al monitoreo integral de la cadena de suministro.
+
+                El proyecto integra simulación de demanda,
+                forecasting, análisis de inventario, capacidad
+                logística, nivel de servicio y optimización
+                de reposición.
+
+                <br/><br/>
+
+                <b>Duración estimada del proyecto:</b>
+                1 a 2 semanas de desarrollo iterativo.
+
+                <br/>
+
+                <b>Etapa:</b>
+                Prototipo funcional / demostrativo.
+
+                <br/>
+
+                <b>Arquitectura:</b>
+                Python + Streamlit + Pandas + NumPy +
+                Scikit-learn + Plotly + ReportLab.
+                """,
+                styles["BodyText"]
             )
         )
 
@@ -1375,32 +1820,146 @@ def generar_pdf():
             Spacer(1, 15)
         )
 
+        # ----------------------------------------------------
+        # KPI
+        # ----------------------------------------------------
+
+        contenido.append(
+            Paragraph(
+                "2. Indicadores ejecutivos",
+                styles["Heading2"]
+            )
+        )
+
+        tabla_kpi = Table([
+            [
+                "Indicador",
+                "Resultado",
+                "Referencia"
+            ],
+            [
+                "Nivel de servicio",
+                f"{fill_rate:.1%}",
+                f"Objetivo {nivel_servicio_obj}%"
+            ],
+            [
+                "Demanda promedio",
+                f"{demanda_promedio:,.0f}",
+                "unidades/día"
+            ],
+            [
+                "Inventario",
+                f"{inventario_actual:,.0f}",
+                f"{cobertura:.1f} días"
+            ],
+            [
+                "Utilización logística",
+                f"{utilizacion:.0f}%",
+                "capacidad"
+            ],
+            [
+                "Riesgo de quiebre",
+                f"{riesgo_quiebre:.1f}%",
+                "proyección"
+            ]
+        ])
+
+        tabla_kpi.setStyle(
+            TableStyle([
+                (
+                    "BACKGROUND",
+                    (0, 0),
+                    (-1, 0),
+                    colors.HexColor(
+                        "#123b5d"
+                    )
+                ),
+                (
+                    "TEXTCOLOR",
+                    (0, 0),
+                    (-1, 0),
+                    colors.white
+                ),
+                (
+                    "GRID",
+                    (0, 0),
+                    (-1, -1),
+                    0.5,
+                    colors.HexColor(
+                        "#cbd5e1"
+                    )
+                ),
+                (
+                    "BACKGROUND",
+                    (0, 1),
+                    (-1, -1),
+                    colors.HexColor(
+                        "#f8fafc"
+                    )
+                ),
+                (
+                    "PADDING",
+                    (0, 0),
+                    (-1, -1),
+                    8
+                )
+            ])
+        )
+
+        contenido.append(
+            tabla_kpi
+        )
+
+        contenido.append(
+            Spacer(1, 18)
+        )
+
+        # ----------------------------------------------------
+        # PARAMETROS
+        # ----------------------------------------------------
+
+        contenido.append(
+            Paragraph(
+                "3. Parámetros de simulación",
+                styles["Heading2"]
+            )
+        )
+
         contenido.append(
             Paragraph(
                 f"""
-                <b>Escenario:</b> {escenario}<br/>
-                <b>Estado:</b> {estado}<br/>
-                <b>Demanda promedio:</b>
-                {demanda_promedio:,.0f} unidades/día<br/>
-                <b>Nivel de servicio:</b>
-                {fill_rate:.1%}<br/>
-                <b>Inventario:</b>
-                {inventario_actual:,.0f} unidades<br/>
-                <b>Cobertura:</b>
-                {cobertura:.1f} días<br/>
-                <b>Riesgo de quiebre:</b>
-                {riesgo_quiebre:.1f}%<br/>
+                <b>Variación de demanda:</b>
+                {demanda_factor}%<br/>
+
+                <b>Lead Time:</b>
+                {lead_time_real} días<br/>
+
                 <b>Capacidad logística:</b>
                 {capacidad_real:.0f}%<br/>
-                <b>Lead Time:</b>
-                {lead_time_real} días
+
+                <b>Nivel de servicio objetivo:</b>
+                {nivel_servicio_obj}%<br/>
+
+                <b>Escenario:</b>
+                {escenario}
                 """,
                 styles["BodyText"]
             )
         )
 
         contenido.append(
-            Spacer(1, 20)
+            Spacer(1, 18)
+        )
+
+        # ----------------------------------------------------
+        # OPTIMIZACIÓN
+        # ----------------------------------------------------
+
+        contenido.append(
+            Paragraph(
+                "4. Decisión de inventario",
+                styles["Heading2"]
+            )
         )
 
         tabla = Table([
@@ -1429,7 +1988,7 @@ def generar_pdf():
                     (0, 0),
                     (-1, 0),
                     colors.HexColor(
-                        "#123b5d"
+                        "#176b9c"
                     )
                 ),
                 (
@@ -1454,34 +2013,106 @@ def generar_pdf():
             ])
         )
 
-        contenido.append(tabla)
+        contenido.append(
+            tabla
+        )
 
         contenido.append(
-            Spacer(1, 20)
+            Spacer(1, 18)
+        )
+
+        # ----------------------------------------------------
+        # LECTURA EJECUTIVA
+        # ----------------------------------------------------
+
+        contenido.append(
+            Paragraph(
+                "5. Lectura ejecutiva",
+                styles["Heading2"]
+            )
         )
 
         contenido.append(
             Paragraph(
                 f"""
-                <b>Lectura ejecutiva:</b><br/><br/>
+                <b>Demanda:</b>
+                {demanda_texto}<br/><br/>
 
-                {lectura_forecast}
+                <b>Inventario:</b>
+                {inventario_texto}<br/><br/>
 
-                El escenario analizado presenta un nivel
-                de servicio de {fill_rate:.1%}, una cobertura
-                de {cobertura:.1f} días y un riesgo de quiebre
-                estimado de {riesgo_quiebre:.1f}%.
+                <b>Servicio:</b>
+                {servicio_texto}<br/><br/>
 
-                Estos resultados corresponden a un modelo
-                académico demostrativo y deben validarse
-                con información operacional real antes de
-                utilizarse para decisiones empresariales.
+                <b>Logística:</b>
+                {logistica_texto}<br/><br/>
+
+                <b>Riesgo:</b>
+                {riesgo_texto}
                 """,
                 styles["BodyText"]
             )
         )
 
-        doc.build(contenido)
+        contenido.append(
+            Spacer(1, 18)
+        )
+
+        # ----------------------------------------------------
+        # CONCLUSIÓN
+        # ----------------------------------------------------
+
+        contenido.append(
+            Paragraph(
+                "6. Conclusión del modelo",
+                styles["Heading2"]
+            )
+        )
+
+        contenido.append(
+            Paragraph(
+                f"""
+                El escenario analizado presenta un estado
+                <b>{estado}</b>.
+
+                El sistema utiliza la interacción entre
+                demanda, inventario, capacidad logística,
+                lead time y nivel de servicio para generar
+                señales anticipadas sobre la cadena.
+
+                <br/><br/>
+
+                Este sistema corresponde a un modelo académico
+                demostrativo. Los datos simulados y las
+                estimaciones deben ser reemplazados o
+                contrastados con información operacional real
+                antes de utilizarse para decisiones empresariales.
+                """,
+                styles["BodyText"]
+            )
+        )
+
+        contenido.append(
+            Spacer(1, 25)
+        )
+
+        contenido.append(
+            Paragraph(
+                "CCU | Predictive Supply Chain Control Tower",
+                titulo
+            )
+        )
+
+        contenido.append(
+            Paragraph(
+                "Informe generado automáticamente por el sistema.",
+                subtitulo
+            )
+        )
+
+        doc.build(
+            contenido
+        )
 
         buffer.seek(0)
 
