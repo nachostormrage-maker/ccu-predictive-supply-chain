@@ -80,51 +80,73 @@ st.markdown("""
 
 .executive {
     background: white;
-    border-left: 5px solid #176b9c;
-    border-radius: 10px;
-    padding: 18px;
-    border-top: 1px solid #e2e8f0;
-    border-right: 1px solid #e2e8f0;
-    border-bottom: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 22px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 10px rgba(15,23,42,.04);
 }
 
-.realtime {
+.diagnostico {
+    background: white;
+    border-radius: 14px;
+    padding: 22px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 10px rgba(15,23,42,.04);
+}
+
+.diagnostico-title {
+    font-size: 19px;
+    font-weight: 800;
+    color: #123b5d;
+}
+
+.diagnostico-text {
+    color: #334155;
+    line-height: 1.7;
+    font-size: 14px;
+}
+
+.status-pill {
+    color: white;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.engine {
     background: linear-gradient(
         90deg,
         #ecfdf5,
-        #f0fdfa
+        #f0fdf4
     );
-    border: 1px solid #a7f3d0;
-    color: #065f46;
+    border: 1px solid #bbf7d0;
+    color: #166534;
     border-radius: 10px;
-    padding: 9px 15px;
+    padding: 10px 15px;
     margin-bottom: 18px;
     font-size: 13px;
     font-weight: 600;
 }
 
-.signal-green {
-    color: #16a34a;
-    font-weight: 800;
-}
-
-.signal-yellow {
-    color: #d97706;
-    font-weight: 800;
-}
-
-.signal-red {
-    color: #dc2626;
-    font-weight: 800;
-}
-
-.small-note {
-    color: #64748b;
-    font-size: 12px;
+.info-card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid #e2e8f0;
 }
 
 </style>
 """, unsafe_allow_html=True)
+
+
+# ============================================================
+# HORA DE ACTUALIZACIÓN
+# ============================================================
+
+hora_actualizacion = datetime.now().strftime(
+    "%d-%m-%Y %H:%M:%S"
+)
 
 
 # ============================================================
@@ -144,13 +166,18 @@ def generar_dataset():
     )
 
     demanda = np.clip(
-        np.random.normal(150, 28, dias),
+        np.random.normal(
+            150,
+            28,
+            dias
+        ),
         70,
         None
     )
 
     ventas = np.clip(
-        demanda * np.random.normal(
+        demanda *
+        np.random.normal(
             0.96,
             0.035,
             dias
@@ -162,7 +189,11 @@ def generar_dataset():
     inventario = np.clip(
         1900 +
         np.cumsum(
-            np.random.normal(0, 25, dias)
+            np.random.normal(
+                0,
+                25,
+                dias
+            )
         ),
         800,
         3000
@@ -222,7 +253,9 @@ def generar_forecast(df):
 
     if len(df) >= 14:
 
-        df["t"] = np.arange(len(df))
+        df["t"] = np.arange(
+            len(df)
+        )
 
         modelo = LinearRegression()
 
@@ -264,8 +297,12 @@ def generar_forecast(df):
             df["forecast"],
             errors="coerce"
         )
-        .fillna(demanda.mean())
-        .clip(lower=0)
+        .fillna(
+            demanda.mean()
+        )
+        .clip(
+            lower=0
+        )
     )
 
     return df
@@ -311,8 +348,12 @@ def calcular_kpis(df):
     )
 
     return {
-        "fill_rate": float(fill_rate),
-        "mae": float(mae),
+        "fill_rate": float(
+            fill_rate
+        ),
+        "mae": float(
+            mae
+        ),
         "inventario_prom": float(
             inventario_prom
         )
@@ -335,6 +376,7 @@ def optimizar_inventario(
     )
 
     costo_pedir = 45000
+
     costo_mantener = 3300
 
     eoq = np.sqrt(
@@ -352,24 +394,28 @@ def optimizar_inventario(
         0.20
     )
 
-    z = 1.65
-
     if servicio >= 97:
+
         z = 1.88
 
     elif servicio >= 95:
+
         z = 1.65
 
     elif servicio >= 90:
+
         z = 1.28
 
     else:
+
         z = 1.04
 
     stock_seguridad = (
         z *
         desviacion *
-        np.sqrt(lead_time)
+        np.sqrt(
+            lead_time
+        )
     )
 
     reorder_point = (
@@ -465,9 +511,12 @@ df_base = generar_dataset()
 # ESCENARIO
 # ============================================================
 
-demanda_extra = demanda_factor / 100
+demanda_extra = (
+    demanda_factor / 100
+)
 
 capacidad_real = capacidad
+
 lead_time_real = lead_time
 
 
@@ -479,13 +528,16 @@ if escenario == "Aumento de demanda":
 elif escenario == "Restricción logística":
 
     capacidad_real *= 0.70
+
     lead_time_real += 3
 
 
 elif escenario == "Alta demanda + restricción":
 
     demanda_extra += 0.25
+
     capacidad_real *= 0.70
+
     lead_time_real += 3
 
 
@@ -497,7 +549,10 @@ df = df_base.copy()
 
 df["demanda"] = (
     df["demanda"] *
-    (1 + demanda_extra)
+    (
+        1 +
+        demanda_extra
+    )
 )
 
 df["ventas"] = np.minimum(
@@ -545,16 +600,22 @@ df["inventario"] = (
 # FORECAST
 # ============================================================
 
-df_fc = generar_forecast(df)
+df_fc = generar_forecast(
+    df
+)
 
 
 # ============================================================
 # KPIs
 # ============================================================
 
-kpis = calcular_kpis(df)
+kpis = calcular_kpis(
+    df
+)
 
-fill_rate = kpis["fill_rate"]
+fill_rate = kpis[
+    "fill_rate"
+]
 
 inventario_actual = (
     df["inventario"].iloc[-1]
@@ -601,105 +662,180 @@ riesgo_quiebre = max(
 
 
 # ============================================================
+# ANÁLISIS DE DEMANDA RECIENTE
+# ============================================================
+
+periodo_reciente = min(
+    30,
+    len(df)
+)
+
+demanda_reciente = (
+    df["demanda"]
+    .tail(periodo_reciente)
+    .mean()
+)
+
+periodo_anterior = min(
+    30,
+    max(
+        1,
+        len(df) -
+        periodo_reciente
+    )
+)
+
+if len(df) >= periodo_reciente * 2:
+
+    demanda_anterior = (
+        df["demanda"]
+        .iloc[
+            -periodo_reciente * 2:
+            -periodo_reciente
+        ]
+        .mean()
+    )
+
+else:
+
+    demanda_anterior = (
+        df["demanda"]
+        .head(periodo_reciente)
+        .mean()
+    )
+
+if demanda_anterior > 0:
+
+    crecimiento_reciente = (
+        (
+            demanda_reciente -
+            demanda_anterior
+        )
+        /
+        demanda_anterior
+    ) * 100
+
+else:
+
+    crecimiento_reciente = 0
+
+
+# ============================================================
+# TENDENCIA DEL FORECAST
+# ============================================================
+
+forecast_reciente = (
+    df_fc["forecast"]
+    .tail(30)
+    .mean()
+)
+
+forecast_anterior = (
+    df_fc["forecast"]
+    .iloc[
+        max(
+            0,
+            len(df_fc) - 60
+        ):
+        max(
+            0,
+            len(df_fc) - 30
+        )
+    ]
+    .mean()
+)
+
+if forecast_anterior > 0:
+
+    tendencia_forecast = (
+        (
+            forecast_reciente -
+            forecast_anterior
+        )
+        /
+        forecast_anterior
+    ) * 100
+
+else:
+
+    tendencia_forecast = 0
+
+
+# ============================================================
 # ESTADO GENERAL
 # ============================================================
 
-# IMPORTANTE:
-# El estado ahora considera TODOS los indicadores.
-# No puede quedar "ESTABLE" si hay señales críticas.
-
 if (
-    fill_rate < nivel_servicio_obj / 100
-    and riesgo_quiebre >= 30
+    riesgo_quiebre >= 70
+    or
+    fill_rate <
+    nivel_servicio_obj / 100 - 0.15
+    or
+    cobertura < 3
 ):
 
     estado = "RIESGO CRÍTICO"
+
     color_estado = "#dc2626"
 
 elif (
-    fill_rate < nivel_servicio_obj / 100
-    or riesgo_quiebre >= 30
-    or cobertura < 5
-    or utilizacion >= 100
-):
-
-    estado = "RIESGO"
-    color_estado = "#dc2626"
-
-elif (
-    riesgo_quiebre >= 15
-    or fill_rate < 0.90
-    or cobertura < 10
+    riesgo_quiebre >= 30
+    or
+    fill_rate <
+    nivel_servicio_obj / 100
+    or
+    cobertura < 10
+    or
+    utilizacion >= 95
 ):
 
     estado = "MONITOREAR"
-    color_estado = "#f59e0b"
+
+    color_estado = "#d97706"
 
 else:
 
     estado = "ESTABLE"
+
     color_estado = "#16a34a"
 
 
 # ============================================================
-# COLORES DINÁMICOS KPI
+# DIAGNÓSTICO
 # ============================================================
 
-def color_servicio(valor, objetivo):
+presiones = 0
 
-    if valor >= objetivo:
-        return "#16a34a"
+if fill_rate < nivel_servicio_obj / 100:
+    presiones += 1
 
-    elif valor >= objetivo - 0.05:
-        return "#f59e0b"
+if cobertura < 10:
+    presiones += 1
 
-    return "#dc2626"
+if utilizacion >= 95:
+    presiones += 1
 
-
-def color_riesgo(valor):
-
-    if valor < 15:
-        return "#16a34a"
-
-    elif valor < 30:
-        return "#f59e0b"
-
-    return "#dc2626"
+if riesgo_quiebre >= 30:
+    presiones += 1
 
 
-def color_cobertura(valor):
+if presiones >= 3:
 
-    if valor >= 10:
-        return "#16a34a"
+    diagnostico_estado = "CRÍTICO"
 
-    elif valor >= 5:
-        return "#f59e0b"
+    diagnostico_color = "#dc2626"
 
-    return "#dc2626"
+elif presiones >= 1:
 
+    diagnostico_estado = "MODERADO"
 
-color_servicio_actual = color_servicio(
-    fill_rate,
-    nivel_servicio_obj / 100
-)
+    diagnostico_color = "#d97706"
 
-color_riesgo_actual = color_riesgo(
-    riesgo_quiebre
-)
+else:
 
-color_cobertura_actual = color_cobertura(
-    cobertura
-)
+    diagnostico_estado = "CONTROLADO"
 
-color_utilizacion = (
-    "#dc2626"
-    if utilizacion >= 100
-    else
-    "#f59e0b"
-    if utilizacion >= 90
-    else
-    "#16a34a"
-)
+    diagnostico_color = "#16a34a"
 
 
 # ============================================================
@@ -714,14 +850,244 @@ optim = optimizar_inventario(
 
 
 # ============================================================
-# FECHA / HORA DE ACTUALIZACIÓN
+# TEXTOS DINÁMICOS
 # ============================================================
 
-ahora = datetime.now()
+# ------------------------------------------------------------
+# DEMANDA
+# ------------------------------------------------------------
 
-hora_actualizacion = ahora.strftime(
-    "%d-%m-%Y %H:%M:%S"
-)
+if crecimiento_reciente >= 5:
+
+    demanda_texto = (
+        f"La demanda presenta una tendencia "
+        f"creciente de {crecimiento_reciente:.1f}% "
+        f"en el período reciente."
+    )
+
+elif crecimiento_reciente <= -5:
+
+    demanda_texto = (
+        f"La demanda presenta una tendencia "
+        f"decreciente de {abs(crecimiento_reciente):.1f}% "
+        f"en el período reciente."
+    )
+
+else:
+
+    demanda_texto = (
+        f"La demanda reciente se mantiene "
+        f"relativamente estable, con una variación "
+        f"de {crecimiento_reciente:+.1f}% frente "
+        f"al período anterior."
+    )
+
+
+# ------------------------------------------------------------
+# INVENTARIO
+# ------------------------------------------------------------
+
+if cobertura < 3:
+
+    inventario_texto = (
+        f"El inventario tiene solo "
+        f"{cobertura:.1f} días de cobertura, "
+        "situación crítica para la disponibilidad."
+    )
+
+elif cobertura < 5:
+
+    inventario_texto = (
+        f"El inventario tiene "
+        f"{cobertura:.1f} días de cobertura "
+        "y presenta presión sobre disponibilidad."
+    )
+
+elif cobertura < 10:
+
+    inventario_texto = (
+        f"El inventario tiene "
+        f"{cobertura:.1f} días de cobertura "
+        "y requiere seguimiento."
+    )
+
+else:
+
+    inventario_texto = (
+        f"El inventario mantiene "
+        f"{cobertura:.1f} días de cobertura."
+    )
+
+
+# ------------------------------------------------------------
+# SERVICIO
+# ------------------------------------------------------------
+
+if fill_rate < nivel_servicio_obj / 100:
+
+    diferencia_servicio = (
+        nivel_servicio_obj -
+        fill_rate * 100
+    )
+
+    servicio_texto = (
+        f"El nivel de servicio "
+        f"({fill_rate:.1%}) está por debajo "
+        f"del objetivo ({nivel_servicio_obj}%), "
+        f"con una brecha de "
+        f"{diferencia_servicio:.1f} puntos."
+    )
+
+else:
+
+    servicio_texto = (
+        f"El nivel de servicio "
+        f"({fill_rate:.1%}) cumple el objetivo "
+        f"configurado de {nivel_servicio_obj}%."
+    )
+
+
+# ------------------------------------------------------------
+# LOGÍSTICA
+# ------------------------------------------------------------
+
+if utilizacion >= 100:
+
+    logistica_texto = (
+        "La capacidad logística está completamente "
+        "utilizada. El sistema identifica un "
+        "cuello de botella potencial."
+    )
+
+elif utilizacion >= 95:
+
+    logistica_texto = (
+        f"La utilización logística es muy elevada "
+        f"({utilizacion:.0f}%) y existe poco margen "
+        "operacional."
+    )
+
+elif utilizacion >= 85:
+
+    logistica_texto = (
+        f"La utilización logística es elevada "
+        f"({utilizacion:.0f}%) y requiere seguimiento."
+    )
+
+else:
+
+    logistica_texto = (
+        f"La utilización logística se encuentra "
+        f"en {utilizacion:.0f}%."
+    )
+
+
+# ------------------------------------------------------------
+# RIESGO
+# ------------------------------------------------------------
+
+if riesgo_quiebre >= 70:
+
+    riesgo_texto = (
+        f"El riesgo proyectado es crítico "
+        f"({riesgo_quiebre:.1f}%). La disponibilidad "
+        "futura requiere atención prioritaria."
+    )
+
+elif riesgo_quiebre >= 30:
+
+    riesgo_texto = (
+        f"El riesgo proyectado es moderado "
+        f"({riesgo_quiebre:.1f}%). Se recomienda "
+        "monitorear inventario y reposición."
+    )
+
+elif riesgo_quiebre >= 15:
+
+    riesgo_texto = (
+        f"El riesgo proyectado es bajo-moderado "
+        f"({riesgo_quiebre:.1f}%)."
+    )
+
+else:
+
+    riesgo_texto = (
+        f"El riesgo proyectado se mantiene bajo "
+        f"({riesgo_quiebre:.1f}%)."
+    )
+
+
+# ------------------------------------------------------------
+# RESUMEN EJECUTIVO
+# ------------------------------------------------------------
+
+señales = []
+
+if fill_rate < nivel_servicio_obj / 100:
+
+    señales.append(
+        f"el nivel de servicio está por debajo "
+        f"del objetivo ({fill_rate:.1%} vs "
+        f"{nivel_servicio_obj}%)"
+    )
+
+if cobertura < 10:
+
+    señales.append(
+        f"la cobertura es reducida "
+        f"({cobertura:.1f} días)"
+    )
+
+if utilizacion >= 95:
+
+    señales.append(
+        "la capacidad logística está "
+        "altamente utilizada"
+    )
+
+if riesgo_quiebre >= 30:
+
+    señales.append(
+        f"el riesgo proyectado es elevado "
+        f"({riesgo_quiebre:.1f}%)"
+    )
+
+
+if presiones >= 3:
+
+    resumen_ejecutivo = (
+        "La simulación identifica múltiples "
+        "presiones operacionales."
+    )
+
+elif presiones >= 1:
+
+    resumen_ejecutivo = (
+        "La simulación identifica señales "
+        "operacionales que requieren seguimiento."
+    )
+
+else:
+
+    resumen_ejecutivo = (
+        "La simulación mantiene los principales "
+        "indicadores dentro de parámetros controlados."
+    )
+
+
+if señales:
+
+    señales_html = "".join(
+        f"<li>{señal}</li>"
+        for señal in señales
+    )
+
+else:
+
+    señales_html = (
+        "<li>no se identifican señales críticas "
+        "en los principales indicadores</li>"
+    )
 
 
 # ============================================================
@@ -747,18 +1113,35 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+
+# ============================================================
+# MOTOR ACTIVO
+# ============================================================
+
 st.markdown(
     f"""
-    <div class="realtime">
+    <div class="engine">
+
     🟢 MOTOR PREDICTIVO ACTIVO
-    &nbsp; | &nbsp;
-    Última actualización: {hora_actualizacion}
-    &nbsp; | &nbsp;
+
+    &nbsp;&nbsp;|&nbsp;&nbsp;
+
+    Última actualización:
+    {hora_actualizacion}
+
+    &nbsp;&nbsp;|&nbsp;&nbsp;
+
     Parámetros recalculados en tiempo real
+
     </div>
     """,
     unsafe_allow_html=True
 )
+
+
+# ============================================================
+# ESTADO
+# ============================================================
 
 st.markdown(
     f"""
@@ -813,15 +1196,13 @@ with c1:
 
     st.markdown(
         f"""
-        <div class="metric-box"
-        style="border-top:4px solid {color_servicio_actual};">
+        <div class="metric-box">
 
         <div class="metric-title">
         Nivel de servicio
         </div>
 
-        <div class="metric-value"
-        style="color:{color_servicio_actual};">
+        <div class="metric-value">
         {fill_rate:.1%}
         </div>
 
@@ -839,8 +1220,7 @@ with c2:
 
     st.markdown(
         f"""
-        <div class="metric-box"
-        style="border-top:4px solid #176b9c;">
+        <div class="metric-box">
 
         <div class="metric-title">
         Demanda promedio
@@ -864,15 +1244,13 @@ with c3:
 
     st.markdown(
         f"""
-        <div class="metric-box"
-        style="border-top:4px solid {color_cobertura_actual};">
+        <div class="metric-box">
 
         <div class="metric-title">
         Inventario
         </div>
 
-        <div class="metric-value"
-        style="color:{color_cobertura_actual};">
+        <div class="metric-value">
         {inventario_actual:,.0f}
         </div>
 
@@ -890,15 +1268,13 @@ with c4:
 
     st.markdown(
         f"""
-        <div class="metric-box"
-        style="border-top:4px solid {color_utilizacion};">
+        <div class="metric-box">
 
         <div class="metric-title">
         Utilización logística
         </div>
 
-        <div class="metric-value"
-        style="color:{color_utilizacion};">
+        <div class="metric-value">
         {utilizacion:.0f}%
         </div>
 
@@ -916,15 +1292,13 @@ with c5:
 
     st.markdown(
         f"""
-        <div class="metric-box"
-        style="border-top:4px solid {color_riesgo_actual};">
+        <div class="metric-box">
 
         <div class="metric-title">
         Riesgo de quiebre
         </div>
 
-        <div class="metric-value"
-        style="color:{color_riesgo_actual};">
+        <div class="metric-value">
         {riesgo_quiebre:.1f}%
         </div>
 
@@ -974,12 +1348,15 @@ colores = []
 for valor in valores:
 
     if valor >= 90:
+
         colores.append("#16a34a")
 
     elif valor >= 70:
+
         colores.append("#f59e0b")
 
     else:
+
         colores.append("#dc2626")
 
 
@@ -1135,7 +1512,7 @@ st.plotly_chart(
 
 
 # ============================================================
-# INVENTARIO
+# INVENTARIO + PRESIÓN
 # ============================================================
 
 col1, col2 = st.columns(2)
@@ -1206,20 +1583,24 @@ with col2:
         "Presión": [
             min(
                 100,
-                50 +
-                demanda_extra *
-                100
+                max(
+                    0,
+                    50 +
+                    crecimiento_reciente * 2
+                )
             ),
             min(
                 100,
-                lead_time_real *
-                7
+                lead_time_real * 7
             ),
             utilizacion,
             min(
                 100,
-                100 -
-                cobertura * 5
+                max(
+                    0,
+                    100 -
+                    cobertura * 5
+                )
             ),
             max(
                 0,
@@ -1266,7 +1647,7 @@ with col2:
 
 
 # ============================================================
-# DECISIÓN PREDICTIVA
+# LECTURA EJECUTIVA
 # ============================================================
 
 st.markdown(
@@ -1274,200 +1655,32 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-
-# ------------------------------------------------------------
-# ANÁLISIS REAL DE CADA INDICADOR
-# ------------------------------------------------------------
-
-problemas = []
-señales = []
-
-if fill_rate < nivel_servicio_obj / 100:
-
-    problemas.append(
-        f"el nivel de servicio está por debajo del objetivo "
-        f"({fill_rate:.1%} vs {nivel_servicio_obj}%)"
-    )
-
-    señales.append("servicio")
-
-
-if cobertura < 5:
-
-    problemas.append(
-        f"la cobertura es crítica ({cobertura:.1f} días)"
-    )
-
-    señales.append("inventario")
-
-elif cobertura < 10:
-
-    problemas.append(
-        f"la cobertura es reducida ({cobertura:.1f} días)"
-    )
-
-    señales.append("inventario")
-
-
-if utilizacion >= 100:
-
-    problemas.append(
-        "la capacidad logística está completamente utilizada"
-    )
-
-    señales.append("logística")
-
-elif utilizacion >= 90:
-
-    problemas.append(
-        f"la utilización logística es elevada ({utilizacion:.0f}%)"
-    )
-
-    señales.append("logística")
-
-
-if riesgo_quiebre >= 50:
-
-    problemas.append(
-        f"el riesgo proyectado es crítico ({riesgo_quiebre:.1f}%)"
-    )
-
-    señales.append("riesgo")
-
-elif riesgo_quiebre >= 30:
-
-    problemas.append(
-        f"el riesgo proyectado es elevado ({riesgo_quiebre:.1f}%)"
-    )
-
-    señales.append("riesgo")
-
-
-# ------------------------------------------------------------
-# TENDENCIA DEL FORECAST
-# ------------------------------------------------------------
-
-forecast_promedio = (
-    df_fc["forecast"]
-    .tail(30)
-    .mean()
-)
-
-variacion_forecast = (
-    (
-        forecast_promedio -
-        demanda_promedio
-    )
-    /
-    max(
-        demanda_promedio,
-        1
-    )
-) * 100
-
-
-if variacion_forecast > 5:
-
-    lectura_forecast = (
-        "El modelo detecta una tendencia creciente "
-        "de demanda."
-    )
-
-elif variacion_forecast < -5:
-
-    lectura_forecast = (
-        "El modelo detecta una tendencia decreciente "
-        "de demanda."
-    )
-
-else:
-
-    lectura_forecast = (
-        "El modelo proyecta una demanda relativamente estable."
-    )
-
-
-# ------------------------------------------------------------
-# MENSAJE EJECUTIVO DINÁMICO
-# ------------------------------------------------------------
-
-if len(problemas) >= 3:
-
-    titulo_lectura = (
-        "La simulación identifica múltiples presiones "
-        "operacionales."
-    )
-
-    color_lectura = "#dc2626"
-
-elif len(problemas) >= 1:
-
-    titulo_lectura = (
-        "La simulación identifica señales que requieren "
-        "monitoreo."
-    )
-
-    color_lectura = "#f59e0b"
-
-else:
-
-    titulo_lectura = (
-        "La simulación se mantiene dentro de los "
-        "parámetros definidos."
-    )
-
-    color_lectura = "#16a34a"
-
-
-detalle_problemas = ""
-
-if problemas:
-
-    detalle_problemas = (
-        "<br><br><b>Principales señales:</b><br>"
-        +
-        "<br>".join(
-            [
-                f"• {p}"
-                for p in problemas
-            ]
-        )
-    )
-
-else:
-
-    detalle_problemas = (
-        "<br><br>Los principales indicadores "
-        "se encuentran dentro de los rangos definidos."
-    )
-
-
 st.markdown(
     f"""
-    <div class="executive"
-    style="border-left-color:{color_lectura};">
+    <div class="executive">
 
-    <div style="
-        color:{color_lectura};
-        font-size:18px;
-        font-weight:800;
-    ">
-    {titulo_lectura}
-    </div>
-
-    <br>
-
-    <b>Demanda:</b>
-    {lectura_forecast}
-
-    {detalle_problemas}
+    <b>{resumen_ejecutivo}</b>
 
     <br><br>
 
+    <b>Demanda:</b>
+    {demanda_texto}
+
+    <br><br>
+
+    <b>Principales señales:</b>
+
+    <ul>
+        {señales_html}
+    </ul>
+
+    <br>
+
     <b>Lectura del modelo:</b>
     La combinación entre demanda, inventario,
-    capacidad logística, lead time y nivel de servicio
-    determina la presión operacional proyectada.
+    capacidad logística, lead time y nivel de
+    servicio determina la presión operacional
+    proyectada.
 
     </div>
     """,
@@ -1476,8 +1689,7 @@ st.markdown(
 
 
 # ============================================================
-# ============================================================
-# EXPLICACIÓN AUTOMÁTICA
+# DIAGNÓSTICO AUTOMÁTICO
 # ============================================================
 
 st.markdown(
@@ -1485,288 +1697,9 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-
-# ============================================================
-# ANÁLISIS DINÁMICO DE DEMANDA
-# ============================================================
-
-# Variación provocada directamente por el escenario
-impacto_demanda = demanda_extra * 100
-
-# Tendencia reciente real
-demanda_reciente = (
-    df_fc["demanda"]
-    .tail(30)
-    .mean()
-)
-
-demanda_anterior = (
-    df_fc["demanda"]
-    .tail(60)
-    .head(30)
-    .mean()
-)
-
-if demanda_anterior > 0:
-
-    tendencia_reciente = (
-        (
-            demanda_reciente -
-            demanda_anterior
-        )
-        /
-        demanda_anterior
-    ) * 100
-
-else:
-
-    tendencia_reciente = 0
-
-
-# ============================================================
-# TEXTO DE DEMANDA
-# ============================================================
-
-if impacto_demanda >= 20:
-
-    demanda_texto = (
-        f"La demanda está siendo impulsada fuertemente "
-        f"por el escenario actual (+{impacto_demanda:.0f}%). "
-        f"El sistema anticipa una presión significativa "
-        f"sobre abastecimiento y reposición."
-    )
-
-elif impacto_demanda >= 10:
-
-    demanda_texto = (
-        f"La demanda presenta un aumento relevante "
-        f"por efecto del escenario (+{impacto_demanda:.0f}%). "
-        f"El modelo anticipa mayores necesidades "
-        f"de abastecimiento."
-    )
-
-elif impacto_demanda <= -10:
-
-    demanda_texto = (
-        f"La demanda presenta una reducción de "
-        f"{abs(impacto_demanda):.0f}% respecto al escenario "
-        f"base. El modelo ajusta la planificación "
-        f"hacia menores volúmenes."
-    )
-
-elif tendencia_reciente > 5:
-
-    demanda_texto = (
-        f"La demanda presenta una tendencia creciente "
-        f"de {tendencia_reciente:.1f}% en el período reciente."
-    )
-
-elif tendencia_reciente < -5:
-
-    demanda_texto = (
-        f"La demanda presenta una tendencia decreciente "
-        f"de {abs(tendencia_reciente):.1f}% en el período reciente."
-    )
-
-else:
-
-    demanda_texto = (
-        "La demanda no presenta una variación significativa "
-        "en el período reciente."
-    )
-
-
-# ============================================================
-# INVENTARIO
-# ============================================================
-
-if cobertura <= 2:
-
-    inventario_texto = (
-        f"El inventario tiene solo {cobertura:.1f} días "
-        "de cobertura. La disponibilidad se encuentra "
-        "bajo presión crítica."
-    )
-
-elif cobertura <= 5:
-
-    inventario_texto = (
-        f"El inventario tiene {cobertura:.1f} días "
-        "de cobertura. El margen disponible es reducido."
-    )
-
-elif cobertura < 10:
-
-    inventario_texto = (
-        f"El inventario tiene {cobertura:.1f} días "
-        "de cobertura y requiere seguimiento."
-    )
-
-else:
-
-    inventario_texto = (
-        f"El inventario mantiene {cobertura:.1f} días "
-        "de cobertura."
-    )
-
-
-# ============================================================
-# SERVICIO
-# ============================================================
-
-brecha_servicio = (
-    nivel_servicio_obj -
-    fill_rate * 100
-)
-
-if brecha_servicio >= 10:
-
-    servicio_texto = (
-        f"El nivel de servicio ({fill_rate:.1%}) está "
-        f"{brecha_servicio:.1f} puntos porcentuales "
-        f"por debajo del objetivo ({nivel_servicio_obj}%). "
-        "Existe una brecha operacional relevante."
-    )
-
-elif brecha_servicio > 0:
-
-    servicio_texto = (
-        f"El nivel de servicio ({fill_rate:.1%}) está "
-        f"{brecha_servicio:.1f} puntos porcentuales "
-        f"por debajo del objetivo ({nivel_servicio_obj}%)."
-    )
-
-else:
-
-    servicio_texto = (
-        f"El nivel de servicio ({fill_rate:.1%}) "
-        "cumple el objetivo configurado."
-    )
-
-
-# ============================================================
-# LOGÍSTICA
-# ============================================================
-
-if utilizacion >= 100:
-
-    logistica_texto = (
-        "La capacidad logística está completamente "
-        "utilizada. El sistema identifica un cuello "
-        "de botella potencial."
-    )
-
-elif utilizacion >= 90:
-
-    logistica_texto = (
-        f"La utilización logística es elevada ({utilizacion:.0f}%). "
-        "El margen operacional disponible es reducido."
-    )
-
-elif utilizacion >= 75:
-
-    logistica_texto = (
-        f"La utilización logística se encuentra en "
-        f"{utilizacion:.0f}%, manteniendo capacidad "
-        "operacional disponible."
-    )
-
-else:
-
-    logistica_texto = (
-        f"La utilización logística se encuentra "
-        f"en {utilizacion:.0f}%, con margen disponible."
-    )
-
-
-# ============================================================
-# RIESGO
-# ============================================================
-
-if riesgo_quiebre >= 80:
-
-    riesgo_texto = (
-        f"El riesgo proyectado es crítico ({riesgo_quiebre:.1f}%). "
-        "La disponibilidad futura requiere atención prioritaria."
-    )
-
-elif riesgo_quiebre >= 50:
-
-    riesgo_texto = (
-        f"El riesgo proyectado es elevado ({riesgo_quiebre:.1f}%). "
-        "El sistema detecta una presión importante sobre "
-        "la disponibilidad."
-    )
-
-elif riesgo_quiebre >= 30:
-
-    riesgo_texto = (
-        f"El riesgo proyectado es moderado ({riesgo_quiebre:.1f}%). "
-        "Se recomienda monitorear inventario y reposición."
-    )
-
-elif riesgo_quiebre >= 15:
-
-    riesgo_texto = (
-        f"El riesgo proyectado es preventivo ({riesgo_quiebre:.1f}%). "
-        "La cadena mantiene una presión acotada."
-    )
-
-else:
-
-    riesgo_texto = (
-        f"El riesgo proyectado se mantiene bajo "
-        f"({riesgo_quiebre:.1f}%)."
-    )
-
-
-# ============================================================
-# COLOR DEL DIAGNÓSTICO
-# ============================================================
-
-if riesgo_quiebre >= 80:
-
-    color_diagnostico = "#dc2626"
-    fondo_diagnostico = "#fef2f2"
-    etiqueta_diagnostico = "CRÍTICO"
-
-elif riesgo_quiebre >= 50:
-
-    color_diagnostico = "#ea580c"
-    fondo_diagnostico = "#fff7ed"
-    etiqueta_diagnostico = "ALTO"
-
-elif riesgo_quiebre >= 30:
-
-    color_diagnostico = "#d97706"
-    fondo_diagnostico = "#fffbeb"
-    etiqueta_diagnostico = "MODERADO"
-
-else:
-
-    color_diagnostico = "#16a34a"
-    fondo_diagnostico = "#f0fdf4"
-    etiqueta_diagnostico = "CONTROLADO"
-
-
-# ============================================================
-# PANEL EJECUTIVO
-# ============================================================
-
 st.markdown(
     f"""
-    <div style="
-        background:{fondo_diagnostico};
-        border-left:6px solid {color_diagnostico};
-        border-radius:14px;
-        padding:22px;
-        margin-top:10px;
-        margin-bottom:20px;
-        border-top:1px solid #e2e8f0;
-        border-right:1px solid #e2e8f0;
-        border-bottom:1px solid #e2e8f0;
-        box-shadow:0 3px 12px rgba(15,23,42,.05);
-    ">
+    <div class="diagnostico">
 
         <div style="
             display:flex;
@@ -1775,32 +1708,22 @@ st.markdown(
             margin-bottom:18px;
         ">
 
-            <div style="
-                font-size:19px;
-                font-weight:800;
-                color:#123b5d;
-            ">
+            <div class="diagnostico-title">
                 Diagnóstico automático
             </div>
 
-            <div style="
-                background:{color_diagnostico};
-                color:white;
-                padding:6px 14px;
-                border-radius:20px;
-                font-size:12px;
-                font-weight:800;
-            ">
-                {etiqueta_diagnostico}
+            <div
+                class="status-pill"
+                style="
+                    background:{diagnostico_color};
+                "
+            >
+                {diagnostico_estado}
             </div>
 
         </div>
 
-        <div style="
-            color:#334155;
-            line-height:1.7;
-            font-size:14px;
-        ">
+        <div class="diagnostico-text">
 
             <b>Demanda</b><br>
             {demanda_texto}
@@ -1828,10 +1751,11 @@ st.markdown(
             <br><br>
 
             <b>Acción analítica</b><br>
-            El modelo combina demanda, inventario, capacidad,
-            lead time y nivel de servicio para anticipar
-            necesidades de reposición y detectar presión
-            operacional antes de que se materialice.
+            El modelo combina demanda, inventario,
+            capacidad, lead time y nivel de servicio
+            para anticipar necesidades de reposición
+            y detectar presión operacional antes de
+            que se materialice.
 
         </div>
 
@@ -1842,7 +1766,7 @@ st.markdown(
 
 
 # ============================================================
-# OPTIMIZACIÓN
+# DECISIÓN DE INVENTARIO
 # ============================================================
 
 st.markdown(
@@ -1896,7 +1820,6 @@ def generar_pdf():
     try:
 
         from reportlab.lib.pagesizes import A4
-
         from reportlab.platypus import (
             SimpleDocTemplate,
             Paragraph,
@@ -1904,19 +1827,14 @@ def generar_pdf():
             Table,
             TableStyle
         )
-
         from reportlab.lib.styles import (
             getSampleStyleSheet,
             ParagraphStyle
         )
-
         from reportlab.lib import colors
-
         from reportlab.lib.enums import TA_CENTER
 
-
         buffer = io.BytesIO()
-
 
         doc = SimpleDocTemplate(
             buffer,
@@ -1927,9 +1845,7 @@ def generar_pdf():
             bottomMargin=35
         )
 
-
         styles = getSampleStyleSheet()
-
 
         titulo = ParagraphStyle(
             "TituloCCU",
@@ -1941,7 +1857,6 @@ def generar_pdf():
             fontSize=22
         )
 
-
         subtitulo = ParagraphStyle(
             "SubtituloCCU",
             parent=styles["Heading2"],
@@ -1952,13 +1867,11 @@ def generar_pdf():
             fontSize=13
         )
 
-
         contenido = []
 
-
-        # ====================================================
+        # ----------------------------------------------------
         # PORTADA
-        # ====================================================
+        # ----------------------------------------------------
 
         contenido.append(
             Paragraph(
@@ -1967,7 +1880,6 @@ def generar_pdf():
             )
         )
 
-
         contenido.append(
             Paragraph(
                 "Informe Ejecutivo de Cadena de Suministro",
@@ -1975,11 +1887,9 @@ def generar_pdf():
             )
         )
 
-
         contenido.append(
             Spacer(1, 12)
         )
-
 
         contenido.append(
             Paragraph(
@@ -1994,7 +1904,7 @@ def generar_pdf():
                 {estado}<br/>
 
                 <b>Diagnóstico:</b>
-                {etiqueta_diagnostico}<br/>
+                {diagnostico_estado}<br/>
 
                 <b>Motor:</b>
                 Modelo predictivo + simulación operacional
@@ -2003,15 +1913,13 @@ def generar_pdf():
             )
         )
 
-
         contenido.append(
             Spacer(1, 18)
         )
 
-
-        # ====================================================
+        # ----------------------------------------------------
         # PROYECTO
-        # ====================================================
+        # ----------------------------------------------------
 
         contenido.append(
             Paragraph(
@@ -2019,7 +1927,6 @@ def generar_pdf():
                 styles["Heading2"]
             )
         )
-
 
         contenido.append(
             Paragraph(
@@ -2035,8 +1942,8 @@ def generar_pdf():
 
                 <br/><br/>
 
-                <b>Duración estimada del proyecto:</b>
-                1 a 2 semanas de desarrollo iterativo.
+                <b>Duración estimada del desarrollo:</b>
+                proyecto iterativo de corto plazo.
 
                 <br/>
 
@@ -2048,20 +1955,24 @@ def generar_pdf():
                 <b>Arquitectura:</b>
                 Python + Streamlit + Pandas + NumPy +
                 Scikit-learn + Plotly + ReportLab.
+
+                <br/><br/>
+
+                <b>Estado de datos:</b>
+                simulación académica para demostración
+                funcional del sistema.
                 """,
                 styles["BodyText"]
             )
         )
 
-
         contenido.append(
             Spacer(1, 15)
         )
 
-
-        # ====================================================
+        # ----------------------------------------------------
         # KPI
-        # ====================================================
+        # ----------------------------------------------------
 
         contenido.append(
             Paragraph(
@@ -2069,7 +1980,6 @@ def generar_pdf():
                 styles["Heading2"]
             )
         )
-
 
         tabla_kpi = Table([
             [
@@ -2104,7 +2014,6 @@ def generar_pdf():
             ]
         ])
 
-
         tabla_kpi.setStyle(
             TableStyle([
                 (
@@ -2115,14 +2024,12 @@ def generar_pdf():
                         "#123b5d"
                     )
                 ),
-
                 (
                     "TEXTCOLOR",
                     (0, 0),
                     (-1, 0),
                     colors.white
                 ),
-
                 (
                     "GRID",
                     (0, 0),
@@ -2132,7 +2039,6 @@ def generar_pdf():
                         "#cbd5e1"
                     )
                 ),
-
                 (
                     "BACKGROUND",
                     (0, 1),
@@ -2141,7 +2047,6 @@ def generar_pdf():
                         "#f8fafc"
                     )
                 ),
-
                 (
                     "PADDING",
                     (0, 0),
@@ -2151,20 +2056,17 @@ def generar_pdf():
             ])
         )
 
-
         contenido.append(
             tabla_kpi
         )
-
 
         contenido.append(
             Spacer(1, 18)
         )
 
-
-        # ====================================================
-        # PARÁMETROS
-        # ====================================================
+        # ----------------------------------------------------
+        # PARAMETROS
+        # ----------------------------------------------------
 
         contenido.append(
             Paragraph(
@@ -2172,7 +2074,6 @@ def generar_pdf():
                 styles["Heading2"]
             )
         )
-
 
         contenido.append(
             Paragraph(
@@ -2196,23 +2097,60 @@ def generar_pdf():
             )
         )
 
+        contenido.append(
+            Spacer(1, 18)
+        )
+
+        # ----------------------------------------------------
+        # DIAGNÓSTICO
+        # ----------------------------------------------------
+
+        contenido.append(
+            Paragraph(
+                "4. Diagnóstico automático",
+                styles["Heading2"]
+            )
+        )
+
+        contenido.append(
+            Paragraph(
+                f"""
+                <b>Estado:</b>
+                {diagnostico_estado}<br/><br/>
+
+                <b>Demanda:</b>
+                {demanda_texto}<br/><br/>
+
+                <b>Inventario:</b>
+                {inventario_texto}<br/><br/>
+
+                <b>Servicio:</b>
+                {servicio_texto}<br/><br/>
+
+                <b>Logística:</b>
+                {logistica_texto}<br/><br/>
+
+                <b>Riesgo:</b>
+                {riesgo_texto}
+                """,
+                styles["BodyText"]
+            )
+        )
 
         contenido.append(
             Spacer(1, 18)
         )
 
-
-        # ====================================================
+        # ----------------------------------------------------
         # OPTIMIZACIÓN
-        # ====================================================
+        # ----------------------------------------------------
 
         contenido.append(
             Paragraph(
-                "4. Decisión de inventario",
+                "5. Decisión de inventario",
                 styles["Heading2"]
             )
         )
-
 
         tabla = Table([
             [
@@ -2233,7 +2171,6 @@ def generar_pdf():
             ]
         ])
 
-
         tabla.setStyle(
             TableStyle([
                 (
@@ -2244,14 +2181,12 @@ def generar_pdf():
                         "#176b9c"
                     )
                 ),
-
                 (
                     "TEXTCOLOR",
                     (0, 0),
                     (-1, 0),
                     colors.white
                 ),
-
                 (
                     "GRID",
                     (0, 0),
@@ -2259,7 +2194,6 @@ def generar_pdf():
                     0.5,
                     colors.grey
                 ),
-
                 (
                     "PADDING",
                     (0, 0),
@@ -2269,63 +2203,17 @@ def generar_pdf():
             ])
         )
 
-
         contenido.append(
             tabla
         )
 
-
         contenido.append(
             Spacer(1, 18)
         )
 
-
-        # ====================================================
-        # LECTURA EJECUTIVA
-        # ====================================================
-
-        contenido.append(
-            Paragraph(
-                "5. Lectura ejecutiva",
-                styles["Heading2"]
-            )
-        )
-
-
-        contenido.append(
-            Paragraph(
-                f"""
-                <b>Demanda:</b>
-                {demanda_texto}<br/><br/>
-
-                <b>Inventario:</b>
-                {inventario_texto}<br/><br/>
-
-                <b>Servicio:</b>
-                {servicio_texto}<br/><br/>
-
-                <b>Logística:</b>
-                {logistica_texto}<br/><br/>
-
-                <b>Riesgo:</b>
-                {riesgo_texto}<br/><br/>
-
-                <b>Diagnóstico general:</b>
-                {etiqueta_diagnostico}
-                """,
-                styles["BodyText"]
-            )
-        )
-
-
-        contenido.append(
-            Spacer(1, 18)
-        )
-
-
-        # ====================================================
+        # ----------------------------------------------------
         # CONCLUSIÓN
-        # ====================================================
+        # ----------------------------------------------------
 
         contenido.append(
             Paragraph(
@@ -2334,42 +2222,39 @@ def generar_pdf():
             )
         )
 
-
         contenido.append(
             Paragraph(
                 f"""
                 El escenario analizado presenta un estado
-                <b>{estado}</b> y un diagnóstico de
-                <b>{etiqueta_diagnostico}</b>.
+                <b>{estado}</b> y un diagnóstico automático
+                clasificado como <b>{diagnostico_estado}</b>.
 
                 <br/><br/>
 
-                La demanda registra actualmente un impacto
-                de {impacto_demanda:.1f}% asociado al escenario
-                seleccionado.
+                La demanda reciente presenta una variación
+                de <b>{crecimiento_reciente:+.1f}%</b> respecto
+                al período anterior.
 
                 El sistema integra demanda, inventario,
-                capacidad logística, lead time y nivel de
-                servicio para generar señales anticipadas
-                sobre la cadena.
+                capacidad logística, lead time y nivel
+                de servicio para generar señales anticipadas
+                de presión operacional.
 
                 <br/><br/>
 
-                Este sistema corresponde a un modelo académico
+                El modelo corresponde a un prototipo académico
                 demostrativo. Los datos simulados y las
-                estimaciones deben ser reemplazados o
-                contrastados con información operacional real
-                antes de utilizarse para decisiones empresariales.
+                estimaciones deben reemplazarse o contrastarse
+                con información operacional real antes de
+                utilizarse para decisiones empresariales.
                 """,
                 styles["BodyText"]
             )
         )
 
-
         contenido.append(
             Spacer(1, 25)
         )
-
 
         contenido.append(
             Paragraph(
@@ -2378,7 +2263,6 @@ def generar_pdf():
             )
         )
 
-
         contenido.append(
             Paragraph(
                 "Informe generado automáticamente por el sistema.",
@@ -2386,16 +2270,13 @@ def generar_pdf():
             )
         )
 
-
         doc.build(
             contenido
         )
 
-
         buffer.seek(0)
 
         return buffer.getvalue()
-
 
     except Exception as e:
 
@@ -2405,10 +2286,6 @@ def generar_pdf():
 
         return None
 
-
-# ============================================================
-# BOTÓN PDF
-# ============================================================
 
 if st.button(
     "📄 Generar informe ejecutivo CCU",
