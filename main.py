@@ -94,6 +94,13 @@ st.markdown("""
     box-shadow: 0 2px 10px rgba(15,23,42,.04);
 }
 
+.diagnostico-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
 .diagnostico-title {
     font-size: 19px;
     font-weight: 800;
@@ -106,9 +113,14 @@ st.markdown("""
     font-size: 14px;
 }
 
+.diagnostico-label {
+    font-weight: 800;
+    color: #123b5d;
+}
+
 .status-pill {
     color: white;
-    padding: 6px 14px;
+    padding: 7px 16px;
     border-radius: 20px;
     font-size: 12px;
     font-weight: 800;
@@ -876,10 +888,9 @@ elif crecimiento_reciente <= -5:
 else:
 
     demanda_texto = (
-        f"La demanda reciente se mantiene "
+        f"La demanda mantiene una trayectoria "
         f"relativamente estable, con una variación "
-        f"de {crecimiento_reciente:+.1f}% frente "
-        f"al período anterior."
+        f"reciente de {crecimiento_reciente:+.1f}%."
     )
 
 
@@ -992,6 +1003,14 @@ if riesgo_quiebre >= 70:
         f"El riesgo proyectado es crítico "
         f"({riesgo_quiebre:.1f}%). La disponibilidad "
         "futura requiere atención prioritaria."
+    )
+
+elif riesgo_quiebre >= 50:
+
+    riesgo_texto = (
+        f"El riesgo proyectado es elevado "
+        f"({riesgo_quiebre:.1f}%). El sistema "
+        "detecta presión sobre la disponibilidad."
     )
 
 elif riesgo_quiebre >= 30:
@@ -1698,411 +1717,105 @@ st.markdown(
 )
 
 
-# ------------------------------------------------------------
-# 1. TENDENCIA DE DEMANDA
-# ------------------------------------------------------------
-
-periodo_reciente_diag = min(
-    30,
-    len(df_fc)
-)
-
-demanda_reciente_diag = (
-    df_fc["demanda"]
-    .tail(periodo_reciente_diag)
-    .mean()
-)
-
-if len(df_fc) >= periodo_reciente_diag * 2:
-
-    demanda_anterior_diag = (
-        df_fc["demanda"]
-        .iloc[
-            -periodo_reciente_diag * 2:
-            -periodo_reciente_diag
-        ]
-        .mean()
-    )
-
-else:
-
-    demanda_anterior_diag = (
-        df_fc["demanda"]
-        .head(periodo_reciente_diag)
-        .mean()
-    )
-
-
-if demanda_anterior_diag > 0:
-
-    tendencia_demanda_diag = (
-        (
-            demanda_reciente_diag -
-            demanda_anterior_diag
-        )
-        /
-        demanda_anterior_diag
-    ) * 100
-
-else:
-
-    tendencia_demanda_diag = 0
-
-
-if tendencia_demanda_diag >= 5:
-
-    demanda_diag = (
-        f"La demanda presenta una tendencia creciente "
-        f"de {tendencia_demanda_diag:.1f}% en el período reciente."
-    )
-
-elif tendencia_demanda_diag <= -5:
-
-    demanda_diag = (
-        f"La demanda presenta una tendencia decreciente "
-        f"de {abs(tendencia_demanda_diag):.1f}% en el período reciente."
-    )
-
-else:
-
-    demanda_diag = (
-        f"La demanda mantiene una trayectoria relativamente "
-        f"estable, con una variación reciente de "
-        f"{tendencia_demanda_diag:+.1f}%."
-    )
-
-
-# ------------------------------------------------------------
-# 2. INVENTARIO
-# ------------------------------------------------------------
-
-if cobertura <= 2:
-
-    inventario_diag = (
-        f"El inventario tiene solo {cobertura:.1f} días "
-        "de cobertura, situación crítica para la disponibilidad."
-    )
-
-elif cobertura <= 5:
-
-    inventario_diag = (
-        f"El inventario tiene {cobertura:.1f} días "
-        "de cobertura y presenta una presión elevada "
-        "sobre la disponibilidad."
-    )
-
-elif cobertura <= 10:
-
-    inventario_diag = (
-        f"El inventario tiene {cobertura:.1f} días "
-        "de cobertura y requiere seguimiento."
-    )
-
-else:
-
-    inventario_diag = (
-        f"El inventario mantiene {cobertura:.1f} días "
-        "de cobertura, proporcionando un nivel adecuado "
-        "de disponibilidad."
-    )
-
-
-# ------------------------------------------------------------
-# 3. SERVICIO
-# ------------------------------------------------------------
-
-objetivo_servicio_diag = (
-    nivel_servicio_obj / 100
-)
-
-brecha_servicio_diag = (
-    nivel_servicio_obj -
-    fill_rate * 100
-)
-
-
-if fill_rate < objetivo_servicio_diag:
-
-    servicio_diag = (
-        f"El nivel de servicio ({fill_rate:.1%}) está "
-        f"por debajo del objetivo ({nivel_servicio_obj}%), "
-        f"con una brecha de {brecha_servicio_diag:.1f} puntos."
-    )
-
-else:
-
-    servicio_diag = (
-        f"El nivel de servicio ({fill_rate:.1%}) cumple "
-        f"el objetivo configurado de {nivel_servicio_obj}%."
-    )
-
-
-# ------------------------------------------------------------
-# 4. LOGÍSTICA
-# ------------------------------------------------------------
-
-if utilizacion >= 100:
-
-    logistica_diag = (
-        "La capacidad logística está completamente utilizada. "
-        "El sistema identifica un posible cuello de botella "
-        "operacional."
-    )
-
-elif utilizacion >= 90:
-
-    logistica_diag = (
-        f"La utilización logística es elevada ({utilizacion:.0f}%) "
-        "y requiere seguimiento."
-    )
-
-elif utilizacion >= 75:
-
-    logistica_diag = (
-        f"La utilización logística se encuentra en "
-        f"{utilizacion:.0f}%, dentro de un rango de presión "
-        "moderada."
-    )
-
-else:
-
-    logistica_diag = (
-        f"La utilización logística se encuentra en "
-        f"{utilizacion:.0f}%, dejando capacidad disponible."
-    )
-
-
-# ------------------------------------------------------------
-# 5. RIESGO
-# ------------------------------------------------------------
+# ============================================================
+# DIAGNÓSTICO AUTOMÁTICO
+# ============================================================
 
 if riesgo_quiebre >= 75:
 
-    riesgo_diag = (
-        f"El riesgo proyectado es crítico ({riesgo_quiebre:.1f}%). "
-        "La disponibilidad futura requiere atención prioritaria."
-    )
+    diagnostico = "CRÍTICO"
+    diagnostico_color = "#dc2626"
 
 elif riesgo_quiebre >= 50:
 
-    riesgo_diag = (
-        f"El riesgo proyectado es elevado ({riesgo_quiebre:.1f}%). "
-        "El sistema detecta una presión importante sobre "
-        "la disponibilidad."
-    )
+    diagnostico = "ALTO"
+    diagnostico_color = "#ea580c"
 
 elif riesgo_quiebre >= 30:
 
-    riesgo_diag = (
-        f"El riesgo proyectado es moderado ({riesgo_quiebre:.1f}%). "
-        "Se recomienda monitorear inventario y reposición."
-    )
-
-elif riesgo_quiebre >= 15:
-
-    riesgo_diag = (
-        f"El riesgo proyectado es bajo-moderado "
-        f"({riesgo_quiebre:.1f}%). Se recomienda mantener "
-        "seguimiento preventivo."
-    )
+    diagnostico = "MODERADO"
+    diagnostico_color = "#d97706"
 
 else:
 
-    riesgo_diag = (
-        f"El riesgo proyectado es bajo ({riesgo_quiebre:.1f}%). "
-        "No se observa una presión relevante sobre "
-        "la disponibilidad."
-    )
+    diagnostico = "CONTROLADO"
+    diagnostico_color = "#16a34a"
 
 
-# ------------------------------------------------------------
-# 6. ESTADO DEL DIAGNÓSTICO
-# ------------------------------------------------------------
-
-if riesgo_quiebre >= 75:
-
-    diagnostico_visual = "CRÍTICO"
-    diagnostico_visual_color = "#dc2626"
-
-elif riesgo_quiebre >= 50:
-
-    diagnostico_visual = "ALTO"
-    diagnostico_visual_color = "#ea580c"
-
-elif riesgo_quiebre >= 30:
-
-    diagnostico_visual = "MODERADO"
-    diagnostico_visual_color = "#d97706"
-
-else:
-
-    diagnostico_visual = "CONTROLADO"
-    diagnostico_visual_color = "#16a34a"
-
-
-# ------------------------------------------------------------
-# 7. TARJETA VISUAL
-# ------------------------------------------------------------
+# ============================================================
+# TARJETA ÚNICA DE DIAGNÓSTICO
+# ============================================================
 
 st.markdown(
     f"""
-    <div style="
-        background:#ffffff;
-        border:1px solid #dbe3ec;
-        border-radius:16px;
-        padding:26px 28px;
-        margin-top:8px;
-        margin-bottom:20px;
-        box-shadow:0 3px 12px rgba(15,23,42,0.06);
-    ">
+    <div class="diagnostico">
 
-        <div style="
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-            margin-bottom:24px;
-            padding-bottom:16px;
-            border-bottom:1px solid #eef2f7;
-        ">
+        <div class="diagnostico-header">
 
-            <div style="
-                font-size:20px;
-                font-weight:800;
-                color:#123b5d;
-            ">
+            <div class="diagnostico-title">
                 Diagnóstico automático
             </div>
 
-            <div style="
-                background:{diagnostico_visual_color};
-                color:#ffffff;
-                padding:7px 17px;
-                border-radius:999px;
-                font-size:11px;
-                font-weight:800;
-                letter-spacing:0.5px;
-            ">
-                {diagnostico_visual}
+            <div
+                class="status-pill"
+                style="background:{diagnostico_color};"
+            >
+                {diagnostico}
             </div>
 
         </div>
 
-        <div style="
-            color:#334155;
-            font-size:14px;
-            line-height:1.65;
-        ">
+        <div class="diagnostico-text">
 
-            <div style="margin-bottom:20px;">
+            <span class="diagnostico-label">
+                Demanda
+            </span>
+            <br>
+            {demanda_texto}
 
-                <div style="
-                    color:#123b5d;
-                    font-weight:800;
-                    margin-bottom:5px;
-                ">
-                    Demanda
-                </div>
+            <br><br>
 
-                <div>
-                    {demanda_diag}
-                </div>
+            <span class="diagnostico-label">
+                Inventario
+            </span>
+            <br>
+            {inventario_texto}
 
-            </div>
+            <br><br>
 
+            <span class="diagnostico-label">
+                Servicio
+            </span>
+            <br>
+            {servicio_texto}
 
-            <div style="margin-bottom:20px;">
+            <br><br>
 
-                <div style="
-                    color:#123b5d;
-                    font-weight:800;
-                    margin-bottom:5px;
-                ">
-                    Inventario
-                </div>
+            <span class="diagnostico-label">
+                Logística
+            </span>
+            <br>
+            {logistica_texto}
 
-                <div>
-                    {inventario_diag}
-                </div>
+            <br><br>
 
-            </div>
+            <span class="diagnostico-label">
+                Riesgo
+            </span>
+            <br>
+            {riesgo_texto}
 
+            <br><br>
 
-            <div style="margin-bottom:20px;">
-
-                <div style="
-                    color:#123b5d;
-                    font-weight:800;
-                    margin-bottom:5px;
-                ">
-                    Servicio
-                </div>
-
-                <div>
-                    {servicio_diag}
-                </div>
-
-            </div>
-
-
-            <div style="margin-bottom:20px;">
-
-                <div style="
-                    color:#123b5d;
-                    font-weight:800;
-                    margin-bottom:5px;
-                ">
-                    Logística
-                </div>
-
-                <div>
-                    {logistica_diag}
-                </div>
-
-            </div>
-
-
-            <div style="margin-bottom:20px;">
-
-                <div style="
-                    color:#123b5d;
-                    font-weight:800;
-                    margin-bottom:5px;
-                ">
-                    Riesgo
-                </div>
-
-                <div>
-                    {riesgo_diag}
-                </div>
-
-            </div>
-
-
-            <div style="
-                margin-top:24px;
-                padding:16px 18px;
-                background:#f8fafc;
-                border-left:4px solid #176b9c;
-                border-radius:8px;
-            ">
-
-                <div style="
-                    color:#123b5d;
-                    font-weight:800;
-                    margin-bottom:5px;
-                ">
-                    Acción analítica
-                </div>
-
-                <div>
-                    El modelo combina demanda, inventario,
-                    capacidad, lead time y nivel de servicio
-                    para anticipar necesidades de reposición
-                    y detectar presión operacional antes de
-                    que se materialice.
-                </div>
-
-            </div>
+            <span class="diagnostico-label">
+                Acción analítica
+            </span>
+            <br>
+            El modelo combina demanda, inventario,
+            capacidad, lead time y nivel de servicio
+            para anticipar necesidades de reposición
+            y detectar presión operacional antes de
+            que se materialice.
 
         </div>
 
@@ -2216,10 +1929,6 @@ def generar_pdf():
 
         contenido = []
 
-        # ----------------------------------------------------
-        # PORTADA
-        # ----------------------------------------------------
-
         contenido.append(
             Paragraph(
                 "CCU | PREDICTIVE SUPPLY CHAIN",
@@ -2251,7 +1960,7 @@ def generar_pdf():
                 {estado}<br/>
 
                 <b>Diagnóstico:</b>
-                {diagnostico_estado}<br/>
+                {diagnostico}<br/>
 
                 <b>Motor:</b>
                 Modelo predictivo + simulación operacional
@@ -2263,10 +1972,6 @@ def generar_pdf():
         contenido.append(
             Spacer(1, 18)
         )
-
-        # ----------------------------------------------------
-        # PROYECTO
-        # ----------------------------------------------------
 
         contenido.append(
             Paragraph(
@@ -2317,10 +2022,6 @@ def generar_pdf():
             Spacer(1, 15)
         )
 
-        # ----------------------------------------------------
-        # KPI
-        # ----------------------------------------------------
-
         contenido.append(
             Paragraph(
                 "2. Indicadores ejecutivos",
@@ -2367,9 +2068,7 @@ def generar_pdf():
                     "BACKGROUND",
                     (0, 0),
                     (-1, 0),
-                    colors.HexColor(
-                        "#123b5d"
-                    )
+                    colors.HexColor("#123b5d")
                 ),
                 (
                     "TEXTCOLOR",
@@ -2382,17 +2081,13 @@ def generar_pdf():
                     (0, 0),
                     (-1, -1),
                     0.5,
-                    colors.HexColor(
-                        "#cbd5e1"
-                    )
+                    colors.HexColor("#cbd5e1")
                 ),
                 (
                     "BACKGROUND",
                     (0, 1),
                     (-1, -1),
-                    colors.HexColor(
-                        "#f8fafc"
-                    )
+                    colors.HexColor("#f8fafc")
                 ),
                 (
                     "PADDING",
@@ -2410,10 +2105,6 @@ def generar_pdf():
         contenido.append(
             Spacer(1, 18)
         )
-
-        # ----------------------------------------------------
-        # PARAMETROS
-        # ----------------------------------------------------
 
         contenido.append(
             Paragraph(
@@ -2448,10 +2139,6 @@ def generar_pdf():
             Spacer(1, 18)
         )
 
-        # ----------------------------------------------------
-        # DIAGNÓSTICO
-        # ----------------------------------------------------
-
         contenido.append(
             Paragraph(
                 "4. Diagnóstico automático",
@@ -2463,22 +2150,22 @@ def generar_pdf():
             Paragraph(
                 f"""
                 <b>Estado:</b>
-                {diagnostico_estado}<br/><br/>
+                {diagnostico}<br/><br/>
 
                 <b>Demanda:</b>
-                {demanda_diag}<br/><br/>
+                {demanda_texto}<br/><br/>
 
                 <b>Inventario:</b>
-                {inventario_diag}<br/><br/>
+                {inventario_texto}<br/><br/>
 
                 <b>Servicio:</b>
-                {servicio_diag}<br/><br/>
+                {servicio_texto}<br/><br/>
 
                 <b>Logística:</b>
-                {logistica_diag}<br/><br/>
+                {logistica_texto}<br/><br/>
 
                 <b>Riesgo:</b>
-                {riesgo_diag}
+                {riesgo_texto}
                 """,
                 styles["BodyText"]
             )
@@ -2487,10 +2174,6 @@ def generar_pdf():
         contenido.append(
             Spacer(1, 18)
         )
-
-        # ----------------------------------------------------
-        # OPTIMIZACIÓN
-        # ----------------------------------------------------
 
         contenido.append(
             Paragraph(
@@ -2524,9 +2207,7 @@ def generar_pdf():
                     "BACKGROUND",
                     (0, 0),
                     (-1, 0),
-                    colors.HexColor(
-                        "#176b9c"
-                    )
+                    colors.HexColor("#176b9c")
                 ),
                 (
                     "TEXTCOLOR",
@@ -2558,10 +2239,6 @@ def generar_pdf():
             Spacer(1, 18)
         )
 
-        # ----------------------------------------------------
-        # CONCLUSIÓN
-        # ----------------------------------------------------
-
         contenido.append(
             Paragraph(
                 "6. Conclusión del modelo",
@@ -2574,7 +2251,7 @@ def generar_pdf():
                 f"""
                 El escenario analizado presenta un estado
                 <b>{estado}</b> y un diagnóstico automático
-                clasificado como <b>{diagnostico_estado}</b>.
+                clasificado como <b>{diagnostico}</b>.
 
                 <br/><br/>
 
@@ -2633,6 +2310,10 @@ def generar_pdf():
 
         return None
 
+
+# ============================================================
+# BOTÓN PDF
+# ============================================================
 
 if st.button(
     "📄 Generar informe ejecutivo CCU",
