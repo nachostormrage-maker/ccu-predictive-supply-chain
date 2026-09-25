@@ -853,157 +853,173 @@ optim = optimizar_inventario(
 # TEXTOS DINÁMICOS
 # ============================================================
 
+# ------------------------------------------------------------
+# DEMANDA
+# ------------------------------------------------------------
+
 if crecimiento_reciente >= 5:
 
     demanda_texto = (
-        f"La demanda presenta una tendencia creciente "
-        f"de {crecimiento_reciente:.1f}% en el período reciente."
+        f"La demanda presenta una tendencia "
+        f"creciente de {crecimiento_reciente:.1f}% "
+        f"en el período reciente."
     )
 
 elif crecimiento_reciente <= -5:
 
     demanda_texto = (
-        f"La demanda presenta una tendencia decreciente "
-        f"de {abs(crecimiento_reciente):.1f}% en el período reciente."
+        f"La demanda presenta una tendencia "
+        f"decreciente de {abs(crecimiento_reciente):.1f}% "
+        f"en el período reciente."
     )
 
 else:
 
     demanda_texto = (
-        f"La demanda mantiene una trayectoria relativamente "
-        f"estable, con una variación reciente de "
-        f"{crecimiento_reciente:+.1f}%."
+        f"La demanda reciente se mantiene "
+        f"relativamente estable, con una variación "
+        f"de {crecimiento_reciente:+.1f}% frente "
+        f"al período anterior."
     )
 
 
-if cobertura <= 2:
+# ------------------------------------------------------------
+# INVENTARIO
+# ------------------------------------------------------------
+
+if cobertura < 3:
 
     inventario_texto = (
-        f"El inventario tiene solo {cobertura:.1f} días "
-        "de cobertura, situación crítica para la disponibilidad."
+        f"El inventario tiene solo "
+        f"{cobertura:.1f} días de cobertura, "
+        "situación crítica para la disponibilidad."
     )
 
-elif cobertura <= 5:
+elif cobertura < 5:
 
     inventario_texto = (
-        f"El inventario tiene {cobertura:.1f} días "
-        "de cobertura y presenta una presión elevada "
-        "sobre la disponibilidad."
+        f"El inventario tiene "
+        f"{cobertura:.1f} días de cobertura "
+        "y presenta presión sobre disponibilidad."
     )
 
-elif cobertura <= 10:
+elif cobertura < 10:
 
     inventario_texto = (
-        f"El inventario tiene {cobertura:.1f} días "
-        "de cobertura y requiere seguimiento."
+        f"El inventario tiene "
+        f"{cobertura:.1f} días de cobertura "
+        "y requiere seguimiento."
     )
 
 else:
 
     inventario_texto = (
-        f"El inventario mantiene {cobertura:.1f} días "
-        "de cobertura, proporcionando un nivel adecuado "
-        "de disponibilidad."
+        f"El inventario mantiene "
+        f"{cobertura:.1f} días de cobertura."
     )
 
 
-objetivo_servicio = nivel_servicio_obj / 100
+# ------------------------------------------------------------
+# SERVICIO
+# ------------------------------------------------------------
 
-brecha_servicio = (
-    nivel_servicio_obj -
-    fill_rate * 100
-)
+if fill_rate < nivel_servicio_obj / 100:
 
-
-if fill_rate < objetivo_servicio:
+    diferencia_servicio = (
+        nivel_servicio_obj -
+        fill_rate * 100
+    )
 
     servicio_texto = (
-        f"El nivel de servicio ({fill_rate:.1%}) está "
-        f"por debajo del objetivo ({nivel_servicio_obj}%), "
-        f"con una brecha de {brecha_servicio:.1f} puntos."
+        f"El nivel de servicio "
+        f"({fill_rate:.1%}) está por debajo "
+        f"del objetivo ({nivel_servicio_obj}%), "
+        f"con una brecha de "
+        f"{diferencia_servicio:.1f} puntos."
     )
 
 else:
 
     servicio_texto = (
-        f"El nivel de servicio ({fill_rate:.1%}) cumple "
-        f"el objetivo configurado de {nivel_servicio_obj}%."
+        f"El nivel de servicio "
+        f"({fill_rate:.1%}) cumple el objetivo "
+        f"configurado de {nivel_servicio_obj}%."
     )
 
+
+# ------------------------------------------------------------
+# LOGÍSTICA
+# ------------------------------------------------------------
 
 if utilizacion >= 100:
 
     logistica_texto = (
-        "La capacidad logística está completamente utilizada. "
-        "El sistema identifica un posible cuello de botella "
+        "La capacidad logística está completamente "
+        "utilizada. El sistema identifica un "
+        "cuello de botella potencial."
+    )
+
+elif utilizacion >= 95:
+
+    logistica_texto = (
+        f"La utilización logística es muy elevada "
+        f"({utilizacion:.0f}%) y existe poco margen "
         "operacional."
     )
 
-elif utilizacion >= 90:
+elif utilizacion >= 85:
 
     logistica_texto = (
-        f"La utilización logística es elevada ({utilizacion:.0f}%) "
-        "y requiere seguimiento."
-    )
-
-elif utilizacion >= 75:
-
-    logistica_texto = (
-        f"La utilización logística se encuentra en "
-        f"{utilizacion:.0f}%, dentro de un rango de presión "
-        "moderada."
+        f"La utilización logística es elevada "
+        f"({utilizacion:.0f}%) y requiere seguimiento."
     )
 
 else:
 
     logistica_texto = (
-        f"La utilización logística se encuentra en "
-        f"{utilizacion:.0f}%, dejando capacidad disponible."
+        f"La utilización logística se encuentra "
+        f"en {utilizacion:.0f}%."
     )
 
 
-if riesgo_quiebre >= 75:
+# ------------------------------------------------------------
+# RIESGO
+# ------------------------------------------------------------
+
+if riesgo_quiebre >= 70:
 
     riesgo_texto = (
-        f"El riesgo proyectado es crítico ({riesgo_quiebre:.1f}%). "
-        "La disponibilidad futura requiere atención prioritaria."
-    )
-
-elif riesgo_quiebre >= 50:
-
-    riesgo_texto = (
-        f"El riesgo proyectado es elevado ({riesgo_quiebre:.1f}%). "
-        "El sistema detecta una presión importante sobre "
-        "la disponibilidad."
+        f"El riesgo proyectado es crítico "
+        f"({riesgo_quiebre:.1f}%). La disponibilidad "
+        "futura requiere atención prioritaria."
     )
 
 elif riesgo_quiebre >= 30:
 
     riesgo_texto = (
-        f"El riesgo proyectado es moderado ({riesgo_quiebre:.1f}%). "
-        "Se recomienda monitorear inventario y reposición."
+        f"El riesgo proyectado es moderado "
+        f"({riesgo_quiebre:.1f}%). Se recomienda "
+        "monitorear inventario y reposición."
     )
 
 elif riesgo_quiebre >= 15:
 
     riesgo_texto = (
         f"El riesgo proyectado es bajo-moderado "
-        f"({riesgo_quiebre:.1f}%). Se recomienda mantener "
-        "seguimiento preventivo."
+        f"({riesgo_quiebre:.1f}%)."
     )
 
 else:
 
     riesgo_texto = (
-        f"El riesgo proyectado es bajo ({riesgo_quiebre:.1f}%). "
-        "No se observa una presión relevante sobre "
-        "la disponibilidad."
+        f"El riesgo proyectado se mantiene bajo "
+        f"({riesgo_quiebre:.1f}%)."
     )
 
 
-# ============================================================
+# ------------------------------------------------------------
 # RESUMEN EJECUTIVO
-# ============================================================
+# ------------------------------------------------------------
 
 señales = []
 
@@ -1332,12 +1348,15 @@ colores = []
 for valor in valores:
 
     if valor >= 90:
+
         colores.append("#16a34a")
 
     elif valor >= 70:
+
         colores.append("#f59e0b")
 
     else:
+
         colores.append("#dc2626")
 
 
@@ -1680,250 +1699,316 @@ st.markdown(
 
 
 # ============================================================
-# DIAGNÓSTICO — ÚNICO BLOQUE
+# DIAGNÓSTICO DINÁMICO
 # ============================================================
+
+# ------------------------------------------------------------
+# 1. TENDENCIA DE DEMANDA
+# ------------------------------------------------------------
+
+periodo_reciente = min(
+    30,
+    len(df_fc)
+)
+
+demanda_reciente = (
+    df_fc["demanda"]
+    .tail(periodo_reciente)
+    .mean()
+)
+
+demanda_anterior = (
+    df_fc["demanda"]
+    .iloc[
+        -periodo_reciente * 2:
+        -periodo_reciente
+    ]
+    .mean()
+)
+
+if demanda_anterior > 0:
+
+    tendencia_demanda = (
+        (
+            demanda_reciente -
+            demanda_anterior
+        )
+        /
+        demanda_anterior
+    ) * 100
+
+else:
+
+    tendencia_demanda = 0
+
+
+if tendencia_demanda >= 5:
+
+    demanda_texto = (
+        f"La demanda presenta una tendencia creciente "
+        f"de {tendencia_demanda:.1f}% en el período reciente."
+    )
+
+elif tendencia_demanda <= -5:
+
+    demanda_texto = (
+        f"La demanda presenta una tendencia decreciente "
+        f"de {abs(tendencia_demanda):.1f}% en el período reciente."
+    )
+
+else:
+
+    demanda_texto = (
+        f"La demanda mantiene una trayectoria relativamente "
+        f"estable, con una variación reciente de "
+        f"{tendencia_demanda:+.1f}%."
+    )
+
+
+# ------------------------------------------------------------
+# 2. INVENTARIO
+# ------------------------------------------------------------
+
+if cobertura <= 2:
+
+    inventario_texto = (
+        f"El inventario tiene solo {cobertura:.1f} días "
+        "de cobertura, situación crítica para la disponibilidad."
+    )
+
+elif cobertura <= 5:
+
+    inventario_texto = (
+        f"El inventario tiene {cobertura:.1f} días "
+        "de cobertura y presenta una presión elevada "
+        "sobre la disponibilidad."
+    )
+
+elif cobertura <= 10:
+
+    inventario_texto = (
+        f"El inventario tiene {cobertura:.1f} días "
+        "de cobertura y requiere seguimiento."
+    )
+
+else:
+
+    inventario_texto = (
+        f"El inventario mantiene {cobertura:.1f} días "
+        "de cobertura, proporcionando un nivel adecuado "
+        "de disponibilidad."
+    )
+
+
+# ------------------------------------------------------------
+# 3. SERVICIO
+# ------------------------------------------------------------
+
+objetivo_servicio = (
+    nivel_servicio_obj / 100
+)
+
+brecha_servicio = (
+    nivel_servicio_obj -
+    fill_rate * 100
+)
+
+
+if fill_rate < objetivo_servicio:
+
+    servicio_texto = (
+        f"El nivel de servicio ({fill_rate:.1%}) está "
+        f"por debajo del objetivo ({nivel_servicio_obj}%), "
+        f"con una brecha de {brecha_servicio:.1f} puntos."
+    )
+
+else:
+
+    servicio_texto = (
+        f"El nivel de servicio ({fill_rate:.1%}) cumple "
+        f"el objetivo configurado de {nivel_servicio_obj}%."
+    )
+
+
+# ------------------------------------------------------------
+# 4. LOGÍSTICA
+# ------------------------------------------------------------
+
+if utilizacion >= 100:
+
+    logistica_texto = (
+        "La capacidad logística está completamente utilizada. "
+        "El sistema identifica un posible cuello de botella "
+        "operacional."
+    )
+
+elif utilizacion >= 90:
+
+    logistica_texto = (
+        f"La utilización logística es elevada ({utilizacion:.0f}%) "
+        "y requiere seguimiento."
+    )
+
+elif utilizacion >= 75:
+
+    logistica_texto = (
+        f"La utilización logística se encuentra en "
+        f"{utilizacion:.0f}%, dentro de un rango de presión "
+        "moderada."
+    )
+
+else:
+
+    logistica_texto = (
+        f"La utilización logística se encuentra en "
+        f"{utilizacion:.0f}%, dejando capacidad disponible."
+    )
+
+
+# ------------------------------------------------------------
+# 5. RIESGO
+# ------------------------------------------------------------
+
+if riesgo_quiebre >= 75:
+
+    riesgo_texto = (
+        f"El riesgo proyectado es crítico ({riesgo_quiebre:.1f}%). "
+        "La disponibilidad futura requiere atención prioritaria."
+    )
+
+elif riesgo_quiebre >= 50:
+
+    riesgo_texto = (
+        f"El riesgo proyectado es elevado ({riesgo_quiebre:.1f}%). "
+        "El sistema detecta una presión importante sobre "
+        "la disponibilidad."
+    )
+
+elif riesgo_quiebre >= 30:
+
+    riesgo_texto = (
+        f"El riesgo proyectado es moderado ({riesgo_quiebre:.1f}%). "
+        "Se recomienda monitorear inventario y reposición."
+    )
+
+elif riesgo_quiebre >= 15:
+
+    riesgo_texto = (
+        f"El riesgo proyectado es bajo-moderado "
+        f"({riesgo_quiebre:.1f}%). Se recomienda mantener "
+        "seguimiento preventivo."
+    )
+
+else:
+
+    riesgo_texto = (
+        f"El riesgo proyectado es bajo ({riesgo_quiebre:.1f}%). "
+        "No se observa una presión relevante sobre "
+        "la disponibilidad."
+    )
+
+
+# ------------------------------------------------------------
+# 6. ESTADO DEL DIAGNÓSTICO
+# ------------------------------------------------------------
 
 if riesgo_quiebre >= 75:
 
     diagnostico = "CRÍTICO"
+
     diagnostico_color = "#dc2626"
-    diagnostico_bg = "#fef2f2"
 
 elif riesgo_quiebre >= 50:
 
     diagnostico = "ALTO"
+
     diagnostico_color = "#ea580c"
-    diagnostico_bg = "#fff7ed"
 
 elif riesgo_quiebre >= 30:
 
     diagnostico = "MODERADO"
+
     diagnostico_color = "#d97706"
-    diagnostico_bg = "#fffbeb"
 
 else:
 
     diagnostico = "CONTROLADO"
-    diagnostico_color = "#16a34a"
-    diagnostico_bg = "#f0fdf4"
 
+    diagnostico_color = "#16a34a"
+
+
+# ------------------------------------------------------------
+# 7. DIAGNÓSTICO VISUAL
+# ------------------------------------------------------------
 
 st.markdown(
     f"""
     <div style="
-        background:#ffffff;
-        border:1px solid #dbe3ec;
-        border-radius:16px;
-        padding:24px 26px;
+        background:white;
+        border:1px solid #e2e8f0;
+        border-radius:14px;
+        padding:22px;
         margin-top:8px;
-        box-shadow:0 3px 12px rgba(15,23,42,.05);
+        box-shadow:0 2px 8px rgba(15,23,42,.04);
     ">
 
         <div style="
             display:flex;
-            justify-content:space-between;
+            justify-content:flex-end;
             align-items:center;
-            padding-bottom:16px;
             margin-bottom:20px;
-            border-bottom:1px solid #eef2f7;
         ">
 
             <div style="
-                font-size:19px;
-                font-weight:800;
-                color:#123b5d;
-            ">
-                Diagnóstico automático
-            </div>
-
-            <div style="
-                background:{diagnostico_bg};
-                color:{diagnostico_color};
-                border:1px solid {diagnostico_color};
+                background:{diagnostico_color};
+                color:white;
                 padding:7px 16px;
-                border-radius:999px;
+                border-radius:20px;
                 font-size:12px;
                 font-weight:800;
-                letter-spacing:.4px;
             ">
                 {diagnostico}
             </div>
 
         </div>
 
-
         <div style="
-            display:grid;
-            grid-template-columns:1fr 1fr;
-            gap:18px;
+            color:#334155;
+            line-height:1.7;
+            font-size:14px;
         ">
 
+            <b>Demanda</b><br>
+            {demanda_texto}
 
-            <div style="
-                background:#f8fafc;
-                border:1px solid #e5eaf0;
-                border-radius:12px;
-                padding:16px;
-            ">
+            <br><br>
 
-                <div style="
-                    color:#123b5d;
-                    font-size:13px;
-                    font-weight:800;
-                    margin-bottom:7px;
-                ">
-                    DEMANDA
-                </div>
+            <b>Inventario</b><br>
+            {inventario_texto}
 
-                <div style="
-                    color:#475569;
-                    font-size:14px;
-                    line-height:1.65;
-                ">
-                    {demanda_texto}
-                </div>
+            <br><br>
 
-            </div>
+            <b>Servicio</b><br>
+            {servicio_texto}
 
+            <br><br>
 
-            <div style="
-                background:#f8fafc;
-                border:1px solid #e5eaf0;
-                border-radius:12px;
-                padding:16px;
-            ">
+            <b>Logística</b><br>
+            {logistica_texto}
 
-                <div style="
-                    color:#123b5d;
-                    font-size:13px;
-                    font-weight:800;
-                    margin-bottom:7px;
-                ">
-                    INVENTARIO
-                </div>
+            <br><br>
 
-                <div style="
-                    color:#475569;
-                    font-size:14px;
-                    line-height:1.65;
-                ">
-                    {inventario_texto}
-                </div>
+            <b>Riesgo</b><br>
+            {riesgo_texto}
 
-            </div>
+            <br><br>
 
-
-            <div style="
-                background:#f8fafc;
-                border:1px solid #e5eaf0;
-                border-radius:12px;
-                padding:16px;
-            ">
-
-                <div style="
-                    color:#123b5d;
-                    font-size:13px;
-                    font-weight:800;
-                    margin-bottom:7px;
-                ">
-                    SERVICIO
-                </div>
-
-                <div style="
-                    color:#475569;
-                    font-size:14px;
-                    line-height:1.65;
-                ">
-                    {servicio_texto}
-                </div>
-
-            </div>
-
-
-            <div style="
-                background:#f8fafc;
-                border:1px solid #e5eaf0;
-                border-radius:12px;
-                padding:16px;
-            ">
-
-                <div style="
-                    color:#123b5d;
-                    font-size:13px;
-                    font-weight:800;
-                    margin-bottom:7px;
-                ">
-                    LOGÍSTICA
-                </div>
-
-                <div style="
-                    color:#475569;
-                    font-size:14px;
-                    line-height:1.65;
-                ">
-                    {logistica_texto}
-                </div>
-
-            </div>
-
-
-        </div>
-
-
-        <div style="
-            margin-top:18px;
-            background:{diagnostico_bg};
-            border-left:4px solid {diagnostico_color};
-            border-radius:10px;
-            padding:16px 18px;
-        ">
-
-            <div style="
-                color:#123b5d;
-                font-size:13px;
-                font-weight:800;
-                margin-bottom:6px;
-            ">
-                RIESGO PROYECTADO
-            </div>
-
-            <div style="
-                color:#475569;
-                font-size:14px;
-                line-height:1.65;
-            ">
-                {riesgo_texto}
-            </div>
-
-        </div>
-
-
-        <div style="
-            margin-top:18px;
-            padding-top:18px;
-            border-top:1px solid #eef2f7;
-        ">
-
-            <div style="
-                color:#123b5d;
-                font-size:13px;
-                font-weight:800;
-                margin-bottom:6px;
-            ">
-                ACCIÓN ANALÍTICA
-            </div>
-
-            <div style="
-                color:#475569;
-                font-size:14px;
-                line-height:1.7;
-            ">
-                El modelo combina demanda, inventario,
-                capacidad, lead time y nivel de servicio
-                para anticipar necesidades de reposición
-                y detectar presión operacional antes de
-                que se materialice.
-            </div>
+            <b>Acción analítica</b><br>
+            El modelo combina demanda, inventario,
+            capacidad, lead time y nivel de servicio
+            para anticipar necesidades de reposición
+            y detectar presión operacional antes de
+            que se materialice.
 
         </div>
 
@@ -1988,7 +2073,6 @@ def generar_pdf():
     try:
 
         from reportlab.lib.pagesizes import A4
-
         from reportlab.platypus import (
             SimpleDocTemplate,
             Paragraph,
@@ -1996,19 +2080,14 @@ def generar_pdf():
             Table,
             TableStyle
         )
-
         from reportlab.lib.styles import (
             getSampleStyleSheet,
             ParagraphStyle
         )
-
         from reportlab.lib import colors
-
         from reportlab.lib.enums import TA_CENTER
 
-
         buffer = io.BytesIO()
-
 
         doc = SimpleDocTemplate(
             buffer,
@@ -2019,9 +2098,7 @@ def generar_pdf():
             bottomMargin=35
         )
 
-
         styles = getSampleStyleSheet()
-
 
         titulo = ParagraphStyle(
             "TituloCCU",
@@ -2033,7 +2110,6 @@ def generar_pdf():
             fontSize=22
         )
 
-
         subtitulo = ParagraphStyle(
             "SubtituloCCU",
             parent=styles["Heading2"],
@@ -2044,9 +2120,11 @@ def generar_pdf():
             fontSize=13
         )
 
-
         contenido = []
 
+        # ----------------------------------------------------
+        # PORTADA
+        # ----------------------------------------------------
 
         contenido.append(
             Paragraph(
@@ -2055,7 +2133,6 @@ def generar_pdf():
             )
         )
 
-
         contenido.append(
             Paragraph(
                 "Informe Ejecutivo de Cadena de Suministro",
@@ -2063,11 +2140,9 @@ def generar_pdf():
             )
         )
 
-
         contenido.append(
             Spacer(1, 12)
         )
-
 
         contenido.append(
             Paragraph(
@@ -2082,7 +2157,7 @@ def generar_pdf():
                 {estado}<br/>
 
                 <b>Diagnóstico:</b>
-                {diagnostico}<br/>
+                {diagnostico_estado}<br/>
 
                 <b>Motor:</b>
                 Modelo predictivo + simulación operacional
@@ -2091,11 +2166,13 @@ def generar_pdf():
             )
         )
 
-
         contenido.append(
             Spacer(1, 18)
         )
 
+        # ----------------------------------------------------
+        # PROYECTO
+        # ----------------------------------------------------
 
         contenido.append(
             Paragraph(
@@ -2103,7 +2180,6 @@ def generar_pdf():
                 styles["Heading2"]
             )
         )
-
 
         contenido.append(
             Paragraph(
@@ -2143,11 +2219,13 @@ def generar_pdf():
             )
         )
 
-
         contenido.append(
             Spacer(1, 15)
         )
 
+        # ----------------------------------------------------
+        # KPI
+        # ----------------------------------------------------
 
         contenido.append(
             Paragraph(
@@ -2155,7 +2233,6 @@ def generar_pdf():
                 styles["Heading2"]
             )
         )
-
 
         tabla_kpi = Table([
             [
@@ -2189,7 +2266,6 @@ def generar_pdf():
                 "proyección"
             ]
         ])
-
 
         tabla_kpi.setStyle(
             TableStyle([
@@ -2233,16 +2309,17 @@ def generar_pdf():
             ])
         )
 
-
         contenido.append(
             tabla_kpi
         )
-
 
         contenido.append(
             Spacer(1, 18)
         )
 
+        # ----------------------------------------------------
+        # PARAMETROS
+        # ----------------------------------------------------
 
         contenido.append(
             Paragraph(
@@ -2250,7 +2327,6 @@ def generar_pdf():
                 styles["Heading2"]
             )
         )
-
 
         contenido.append(
             Paragraph(
@@ -2274,11 +2350,13 @@ def generar_pdf():
             )
         )
 
-
         contenido.append(
             Spacer(1, 18)
         )
 
+        # ----------------------------------------------------
+        # DIAGNÓSTICO
+        # ----------------------------------------------------
 
         contenido.append(
             Paragraph(
@@ -2287,12 +2365,11 @@ def generar_pdf():
             )
         )
 
-
         contenido.append(
             Paragraph(
                 f"""
                 <b>Estado:</b>
-                {diagnostico}<br/><br/>
+                {diagnostico_estado}<br/><br/>
 
                 <b>Demanda:</b>
                 {demanda_texto}<br/><br/>
@@ -2313,11 +2390,13 @@ def generar_pdf():
             )
         )
 
-
         contenido.append(
             Spacer(1, 18)
         )
 
+        # ----------------------------------------------------
+        # OPTIMIZACIÓN
+        # ----------------------------------------------------
 
         contenido.append(
             Paragraph(
@@ -2325,7 +2404,6 @@ def generar_pdf():
                 styles["Heading2"]
             )
         )
-
 
         tabla = Table([
             [
@@ -2345,7 +2423,6 @@ def generar_pdf():
                 f"{optim['eoq']:,.0f}"
             ]
         ])
-
 
         tabla.setStyle(
             TableStyle([
@@ -2379,16 +2456,17 @@ def generar_pdf():
             ])
         )
 
-
         contenido.append(
             tabla
         )
-
 
         contenido.append(
             Spacer(1, 18)
         )
 
+        # ----------------------------------------------------
+        # CONCLUSIÓN
+        # ----------------------------------------------------
 
         contenido.append(
             Paragraph(
@@ -2397,13 +2475,12 @@ def generar_pdf():
             )
         )
 
-
         contenido.append(
             Paragraph(
                 f"""
                 El escenario analizado presenta un estado
                 <b>{estado}</b> y un diagnóstico automático
-                clasificado como <b>{diagnostico}</b>.
+                clasificado como <b>{diagnostico_estado}</b>.
 
                 <br/><br/>
 
@@ -2428,11 +2505,9 @@ def generar_pdf():
             )
         )
 
-
         contenido.append(
             Spacer(1, 25)
         )
-
 
         contenido.append(
             Paragraph(
@@ -2441,7 +2516,6 @@ def generar_pdf():
             )
         )
 
-
         contenido.append(
             Paragraph(
                 "Informe generado automáticamente por el sistema.",
@@ -2449,16 +2523,13 @@ def generar_pdf():
             )
         )
 
-
         doc.build(
             contenido
         )
 
-
         buffer.seek(0)
 
         return buffer.getvalue()
-
 
     except Exception as e:
 
