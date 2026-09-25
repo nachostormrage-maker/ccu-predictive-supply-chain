@@ -1476,6 +1476,7 @@ st.markdown(
 
 
 # ============================================================
+# ============================================================
 # EXPLICACIÓN AUTOMÁTICA
 # ============================================================
 
@@ -1485,39 +1486,113 @@ st.markdown(
 )
 
 
-# Demanda
+# ============================================================
+# ANÁLISIS DINÁMICO DE DEMANDA
+# ============================================================
 
-if variacion_forecast > 5:
+# Variación provocada directamente por el escenario
+impacto_demanda = demanda_extra * 100
+
+# Tendencia reciente real
+demanda_reciente = (
+    df_fc["demanda"]
+    .tail(30)
+    .mean()
+)
+
+demanda_anterior = (
+    df_fc["demanda"]
+    .tail(60)
+    .head(30)
+    .mean()
+)
+
+if demanda_anterior > 0:
+
+    tendencia_reciente = (
+        (
+            demanda_reciente -
+            demanda_anterior
+        )
+        /
+        demanda_anterior
+    ) * 100
+
+else:
+
+    tendencia_reciente = 0
+
+
+# ============================================================
+# TEXTO DE DEMANDA
+# ============================================================
+
+if impacto_demanda >= 20:
 
     demanda_texto = (
-        f"La demanda presenta una señal creciente. "
-        f"El forecast se encuentra aproximadamente "
-        f"{variacion_forecast:.1f}% sobre la demanda promedio."
+        f"La demanda está siendo impulsada fuertemente "
+        f"por el escenario actual (+{impacto_demanda:.0f}%). "
+        f"El sistema anticipa una presión significativa "
+        f"sobre abastecimiento y reposición."
     )
 
-elif variacion_forecast < -5:
+elif impacto_demanda >= 10:
 
     demanda_texto = (
-        f"La demanda presenta una señal decreciente. "
-        f"El forecast se encuentra aproximadamente "
-        f"{abs(variacion_forecast):.1f}% bajo la demanda promedio."
+        f"La demanda presenta un aumento relevante "
+        f"por efecto del escenario (+{impacto_demanda:.0f}%). "
+        f"El modelo anticipa mayores necesidades "
+        f"de abastecimiento."
+    )
+
+elif impacto_demanda <= -10:
+
+    demanda_texto = (
+        f"La demanda presenta una reducción de "
+        f"{abs(impacto_demanda):.0f}% respecto al escenario "
+        f"base. El modelo ajusta la planificación "
+        f"hacia menores volúmenes."
+    )
+
+elif tendencia_reciente > 5:
+
+    demanda_texto = (
+        f"La demanda presenta una tendencia creciente "
+        f"de {tendencia_reciente:.1f}% en el período reciente."
+    )
+
+elif tendencia_reciente < -5:
+
+    demanda_texto = (
+        f"La demanda presenta una tendencia decreciente "
+        f"de {abs(tendencia_reciente):.1f}% en el período reciente."
     )
 
 else:
 
     demanda_texto = (
-        "La demanda proyectada mantiene una trayectoria "
-        "relativamente estable."
+        "La demanda no presenta una variación significativa "
+        "en el período reciente."
     )
 
 
-# Inventario
+# ============================================================
+# INVENTARIO
+# ============================================================
 
-if cobertura < 5:
+if cobertura <= 2:
 
     inventario_texto = (
         f"El inventario tiene solo {cobertura:.1f} días "
-        "de cobertura, señal de presión sobre disponibilidad."
+        "de cobertura. La disponibilidad se encuentra "
+        "bajo presión crítica."
+    )
+
+elif cobertura <= 5:
+
+    inventario_texto = (
+        f"El inventario tiene {cobertura:.1f} días "
+        "de cobertura. El margen disponible es reducido."
     )
 
 elif cobertura < 10:
@@ -1535,12 +1610,29 @@ else:
     )
 
 
-# Servicio
+# ============================================================
+# SERVICIO
+# ============================================================
 
-if fill_rate < nivel_servicio_obj / 100:
+brecha_servicio = (
+    nivel_servicio_obj -
+    fill_rate * 100
+)
+
+if brecha_servicio >= 10:
 
     servicio_texto = (
         f"El nivel de servicio ({fill_rate:.1%}) está "
+        f"{brecha_servicio:.1f} puntos porcentuales "
+        f"por debajo del objetivo ({nivel_servicio_obj}%). "
+        "Existe una brecha operacional relevante."
+    )
+
+elif brecha_servicio > 0:
+
+    servicio_texto = (
+        f"El nivel de servicio ({fill_rate:.1%}) está "
+        f"{brecha_servicio:.1f} puntos porcentuales "
         f"por debajo del objetivo ({nivel_servicio_obj}%)."
     )
 
@@ -1552,49 +1644,72 @@ else:
     )
 
 
-# Logística
+# ============================================================
+# LOGÍSTICA
+# ============================================================
 
 if utilizacion >= 100:
 
     logistica_texto = (
-        "La capacidad logística está en el límite "
-        "operacional."
+        "La capacidad logística está completamente "
+        "utilizada. El sistema identifica un cuello "
+        "de botella potencial."
     )
 
 elif utilizacion >= 90:
 
     logistica_texto = (
-        f"La utilización logística es elevada ({utilizacion:.0f}%)."
+        f"La utilización logística es elevada ({utilizacion:.0f}%). "
+        "El margen operacional disponible es reducido."
+    )
+
+elif utilizacion >= 75:
+
+    logistica_texto = (
+        f"La utilización logística se encuentra en "
+        f"{utilizacion:.0f}%, manteniendo capacidad "
+        "operacional disponible."
     )
 
 else:
 
     logistica_texto = (
         f"La utilización logística se encuentra "
-        f"en {utilizacion:.0f}%."
+        f"en {utilizacion:.0f}%, con margen disponible."
     )
 
 
-# Riesgo
+# ============================================================
+# RIESGO
+# ============================================================
 
-if riesgo_quiebre >= 50:
+if riesgo_quiebre >= 80:
 
     riesgo_texto = (
         f"El riesgo proyectado es crítico ({riesgo_quiebre:.1f}%). "
         "La disponibilidad futura requiere atención prioritaria."
     )
 
-elif riesgo_quiebre >= 30:
+elif riesgo_quiebre >= 50:
 
     riesgo_texto = (
         f"El riesgo proyectado es elevado ({riesgo_quiebre:.1f}%). "
-        "El sistema detecta presión sobre la disponibilidad."
+        "El sistema detecta una presión importante sobre "
+        "la disponibilidad."
+    )
+
+elif riesgo_quiebre >= 30:
+
+    riesgo_texto = (
+        f"El riesgo proyectado es moderado ({riesgo_quiebre:.1f}%). "
+        "Se recomienda monitorear inventario y reposición."
     )
 
 elif riesgo_quiebre >= 15:
 
     riesgo_texto = (
-        f"El riesgo proyectado es moderado ({riesgo_quiebre:.1f}%)."
+        f"El riesgo proyectado es preventivo ({riesgo_quiebre:.1f}%). "
+        "La cadena mantiene una presión acotada."
     )
 
 else:
@@ -1605,22 +1720,124 @@ else:
     )
 
 
-st.info(
+# ============================================================
+# COLOR DEL DIAGNÓSTICO
+# ============================================================
+
+if riesgo_quiebre >= 80:
+
+    color_diagnostico = "#dc2626"
+    fondo_diagnostico = "#fef2f2"
+    etiqueta_diagnostico = "CRÍTICO"
+
+elif riesgo_quiebre >= 50:
+
+    color_diagnostico = "#ea580c"
+    fondo_diagnostico = "#fff7ed"
+    etiqueta_diagnostico = "ALTO"
+
+elif riesgo_quiebre >= 30:
+
+    color_diagnostico = "#d97706"
+    fondo_diagnostico = "#fffbeb"
+    etiqueta_diagnostico = "MODERADO"
+
+else:
+
+    color_diagnostico = "#16a34a"
+    fondo_diagnostico = "#f0fdf4"
+    etiqueta_diagnostico = "CONTROLADO"
+
+
+# ============================================================
+# PANEL EJECUTIVO
+# ============================================================
+
+st.markdown(
     f"""
-    **Demanda:** {demanda_texto}
+    <div style="
+        background:{fondo_diagnostico};
+        border-left:6px solid {color_diagnostico};
+        border-radius:14px;
+        padding:22px;
+        margin-top:10px;
+        margin-bottom:20px;
+        border-top:1px solid #e2e8f0;
+        border-right:1px solid #e2e8f0;
+        border-bottom:1px solid #e2e8f0;
+        box-shadow:0 3px 12px rgba(15,23,42,.05);
+    ">
 
-    **Inventario:** {inventario_texto}
+        <div style="
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            margin-bottom:18px;
+        ">
 
-    **Servicio:** {servicio_texto}
+            <div style="
+                font-size:19px;
+                font-weight:800;
+                color:#123b5d;
+            ">
+                Diagnóstico automático
+            </div>
 
-    **Logística:** {logistica_texto}
+            <div style="
+                background:{color_diagnostico};
+                color:white;
+                padding:6px 14px;
+                border-radius:20px;
+                font-size:12px;
+                font-weight:800;
+            ">
+                {etiqueta_diagnostico}
+            </div>
 
-    **Riesgo:** {riesgo_texto}
+        </div>
 
-    **Acción analítica:** el modelo combina estas señales
-    para anticipar necesidades de reposición, capacidad
-    y nivel de servicio.
-    """
+        <div style="
+            color:#334155;
+            line-height:1.7;
+            font-size:14px;
+        ">
+
+            <b>Demanda</b><br>
+            {demanda_texto}
+
+            <br><br>
+
+            <b>Inventario</b><br>
+            {inventario_texto}
+
+            <br><br>
+
+            <b>Servicio</b><br>
+            {servicio_texto}
+
+            <br><br>
+
+            <b>Logística</b><br>
+            {logistica_texto}
+
+            <br><br>
+
+            <b>Riesgo</b><br>
+            {riesgo_texto}
+
+            <br><br>
+
+            <b>Acción analítica</b><br>
+            El modelo combina demanda, inventario, capacidad,
+            lead time y nivel de servicio para anticipar
+            necesidades de reposición y detectar presión
+            operacional antes de que se materialice.
+
+        </div>
+
+    </div>
+    """,
+    unsafe_allow_html=True
 )
 
 
@@ -1679,6 +1896,7 @@ def generar_pdf():
     try:
 
         from reportlab.lib.pagesizes import A4
+
         from reportlab.platypus import (
             SimpleDocTemplate,
             Paragraph,
@@ -1686,14 +1904,19 @@ def generar_pdf():
             Table,
             TableStyle
         )
+
         from reportlab.lib.styles import (
             getSampleStyleSheet,
             ParagraphStyle
         )
+
         from reportlab.lib import colors
+
         from reportlab.lib.enums import TA_CENTER
 
+
         buffer = io.BytesIO()
+
 
         doc = SimpleDocTemplate(
             buffer,
@@ -1704,7 +1927,9 @@ def generar_pdf():
             bottomMargin=35
         )
 
+
         styles = getSampleStyleSheet()
+
 
         titulo = ParagraphStyle(
             "TituloCCU",
@@ -1716,6 +1941,7 @@ def generar_pdf():
             fontSize=22
         )
 
+
         subtitulo = ParagraphStyle(
             "SubtituloCCU",
             parent=styles["Heading2"],
@@ -1726,11 +1952,13 @@ def generar_pdf():
             fontSize=13
         )
 
+
         contenido = []
 
-        # ----------------------------------------------------
+
+        # ====================================================
         # PORTADA
-        # ----------------------------------------------------
+        # ====================================================
 
         contenido.append(
             Paragraph(
@@ -1739,6 +1967,7 @@ def generar_pdf():
             )
         )
 
+
         contenido.append(
             Paragraph(
                 "Informe Ejecutivo de Cadena de Suministro",
@@ -1746,9 +1975,11 @@ def generar_pdf():
             )
         )
 
+
         contenido.append(
             Spacer(1, 12)
         )
+
 
         contenido.append(
             Paragraph(
@@ -1762,6 +1993,9 @@ def generar_pdf():
                 <b>Estado del sistema:</b>
                 {estado}<br/>
 
+                <b>Diagnóstico:</b>
+                {etiqueta_diagnostico}<br/>
+
                 <b>Motor:</b>
                 Modelo predictivo + simulación operacional
                 """,
@@ -1769,13 +2003,15 @@ def generar_pdf():
             )
         )
 
+
         contenido.append(
             Spacer(1, 18)
         )
 
-        # ----------------------------------------------------
+
+        # ====================================================
         # PROYECTO
-        # ----------------------------------------------------
+        # ====================================================
 
         contenido.append(
             Paragraph(
@@ -1783,6 +2019,7 @@ def generar_pdf():
                 styles["Heading2"]
             )
         )
+
 
         contenido.append(
             Paragraph(
@@ -1816,13 +2053,15 @@ def generar_pdf():
             )
         )
 
+
         contenido.append(
             Spacer(1, 15)
         )
 
-        # ----------------------------------------------------
+
+        # ====================================================
         # KPI
-        # ----------------------------------------------------
+        # ====================================================
 
         contenido.append(
             Paragraph(
@@ -1830,6 +2069,7 @@ def generar_pdf():
                 styles["Heading2"]
             )
         )
+
 
         tabla_kpi = Table([
             [
@@ -1864,6 +2104,7 @@ def generar_pdf():
             ]
         ])
 
+
         tabla_kpi.setStyle(
             TableStyle([
                 (
@@ -1874,12 +2115,14 @@ def generar_pdf():
                         "#123b5d"
                     )
                 ),
+
                 (
                     "TEXTCOLOR",
                     (0, 0),
                     (-1, 0),
                     colors.white
                 ),
+
                 (
                     "GRID",
                     (0, 0),
@@ -1889,6 +2132,7 @@ def generar_pdf():
                         "#cbd5e1"
                     )
                 ),
+
                 (
                     "BACKGROUND",
                     (0, 1),
@@ -1897,6 +2141,7 @@ def generar_pdf():
                         "#f8fafc"
                     )
                 ),
+
                 (
                     "PADDING",
                     (0, 0),
@@ -1906,17 +2151,20 @@ def generar_pdf():
             ])
         )
 
+
         contenido.append(
             tabla_kpi
         )
+
 
         contenido.append(
             Spacer(1, 18)
         )
 
-        # ----------------------------------------------------
-        # PARAMETROS
-        # ----------------------------------------------------
+
+        # ====================================================
+        # PARÁMETROS
+        # ====================================================
 
         contenido.append(
             Paragraph(
@@ -1924,6 +2172,7 @@ def generar_pdf():
                 styles["Heading2"]
             )
         )
+
 
         contenido.append(
             Paragraph(
@@ -1947,13 +2196,15 @@ def generar_pdf():
             )
         )
 
+
         contenido.append(
             Spacer(1, 18)
         )
 
-        # ----------------------------------------------------
+
+        # ====================================================
         # OPTIMIZACIÓN
-        # ----------------------------------------------------
+        # ====================================================
 
         contenido.append(
             Paragraph(
@@ -1961,6 +2212,7 @@ def generar_pdf():
                 styles["Heading2"]
             )
         )
+
 
         tabla = Table([
             [
@@ -1981,6 +2233,7 @@ def generar_pdf():
             ]
         ])
 
+
         tabla.setStyle(
             TableStyle([
                 (
@@ -1991,12 +2244,14 @@ def generar_pdf():
                         "#176b9c"
                     )
                 ),
+
                 (
                     "TEXTCOLOR",
                     (0, 0),
                     (-1, 0),
                     colors.white
                 ),
+
                 (
                     "GRID",
                     (0, 0),
@@ -2004,6 +2259,7 @@ def generar_pdf():
                     0.5,
                     colors.grey
                 ),
+
                 (
                     "PADDING",
                     (0, 0),
@@ -2013,17 +2269,20 @@ def generar_pdf():
             ])
         )
 
+
         contenido.append(
             tabla
         )
+
 
         contenido.append(
             Spacer(1, 18)
         )
 
-        # ----------------------------------------------------
+
+        # ====================================================
         # LECTURA EJECUTIVA
-        # ----------------------------------------------------
+        # ====================================================
 
         contenido.append(
             Paragraph(
@@ -2031,6 +2290,7 @@ def generar_pdf():
                 styles["Heading2"]
             )
         )
+
 
         contenido.append(
             Paragraph(
@@ -2048,19 +2308,24 @@ def generar_pdf():
                 {logistica_texto}<br/><br/>
 
                 <b>Riesgo:</b>
-                {riesgo_texto}
+                {riesgo_texto}<br/><br/>
+
+                <b>Diagnóstico general:</b>
+                {etiqueta_diagnostico}
                 """,
                 styles["BodyText"]
             )
         )
 
+
         contenido.append(
             Spacer(1, 18)
         )
 
-        # ----------------------------------------------------
+
+        # ====================================================
         # CONCLUSIÓN
-        # ----------------------------------------------------
+        # ====================================================
 
         contenido.append(
             Paragraph(
@@ -2069,16 +2334,24 @@ def generar_pdf():
             )
         )
 
+
         contenido.append(
             Paragraph(
                 f"""
                 El escenario analizado presenta un estado
-                <b>{estado}</b>.
+                <b>{estado}</b> y un diagnóstico de
+                <b>{etiqueta_diagnostico}</b>.
 
-                El sistema utiliza la interacción entre
-                demanda, inventario, capacidad logística,
-                lead time y nivel de servicio para generar
-                señales anticipadas sobre la cadena.
+                <br/><br/>
+
+                La demanda registra actualmente un impacto
+                de {impacto_demanda:.1f}% asociado al escenario
+                seleccionado.
+
+                El sistema integra demanda, inventario,
+                capacidad logística, lead time y nivel de
+                servicio para generar señales anticipadas
+                sobre la cadena.
 
                 <br/><br/>
 
@@ -2092,9 +2365,11 @@ def generar_pdf():
             )
         )
 
+
         contenido.append(
             Spacer(1, 25)
         )
+
 
         contenido.append(
             Paragraph(
@@ -2103,6 +2378,7 @@ def generar_pdf():
             )
         )
 
+
         contenido.append(
             Paragraph(
                 "Informe generado automáticamente por el sistema.",
@@ -2110,13 +2386,16 @@ def generar_pdf():
             )
         )
 
+
         doc.build(
             contenido
         )
 
+
         buffer.seek(0)
 
         return buffer.getvalue()
+
 
     except Exception as e:
 
@@ -2126,6 +2405,10 @@ def generar_pdf():
 
         return None
 
+
+# ============================================================
+# BOTÓN PDF
+# ============================================================
 
 if st.button(
     "📄 Generar informe ejecutivo CCU",
